@@ -1,0 +1,544 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #111111;
+    background-color: #f8f7f2;
+}
+
+.pagina-login {
+    position: relative;
+
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    padding: 20px;
+
+    overflow: hidden;
+
+    background-color: #f8f7f2;
+
+    /* Grade do fundo */
+    background-image:
+        linear-gradient(
+            rgba(40, 40, 40, 0.045) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(40, 40, 40, 0.045) 1px,
+            transparent 1px
+        );
+
+    background-size: 47px 47px;
+}
+
+.marca {
+    position: absolute;
+
+    top: 20px;
+    left: 6.5%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    z-index: 2;
+}
+
+.icone-marca {
+    width: 34px;
+    height: 34px;
+
+    border: 2px solid #e9b928;
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transform: rotate(-15deg);
+}
+
+.icone-marca span {
+    width: 3px;
+    height: 17px;
+
+    background-color: #e9b928;
+
+    border-radius: 5px;
+
+    transform: rotate(15deg);
+}
+
+.texto-marca h1 {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.texto-marca span {
+    display: block;
+
+    margin-top: 4px;
+
+    font-size: 7px;
+    letter-spacing: 2px;
+
+    color: #77736c;
+}
+
+.decoracao-tesoura {
+    position: absolute;
+
+    left: 10%;
+    top: 30%;
+
+    font-size: 125px;
+
+    color: rgba(235, 195, 75, 0.25);
+
+    transform: rotate(-15deg);
+
+    user-select: none;
+    pointer-events: none;
+}
+
+
+.cartao-login {
+    width: 100%;
+    max-width: 480px;
+
+    margin-top: 0;
+
+    padding: 40px 38px 30px;
+
+    background-color: #fffefa;
+
+    border: 1px solid #e5e1d7;
+
+    border-radius: 11px;
+
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.08);
+
+    z-index: 1;
+}
+
+
+.cabecalho-login {
+    margin-bottom: 26px;
+}
+
+.rotulo-login {
+    display: block;
+
+    margin-bottom: 12px;
+
+    font-size: 9px;
+    font-weight: 600;
+
+    letter-spacing: 2px;
+
+    color: #a36f3d;
+}
+
+.cabecalho-login h2 {
+    font-size: 34px;
+    font-weight: 700;
+
+    line-height: 1.02;
+
+    letter-spacing: -1.5px;
+
+    color: #111111;
+}
+
+.cabecalho-login h2 span {
+    color: #b9a477;
+}
+
+.cabecalho-login p {
+    max-width: 350px;
+
+    margin-top: 14px;
+
+    font-size: 12px;
+    line-height: 1.6;
+
+    color: #8b8780;
+}
+
+
+.tipo-acesso {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    padding: 4px;
+
+    margin-bottom: 22px;
+
+    background-color: #f0eee8;
+
+    border-radius: 6px;
+}
+
+.opcao-acesso {
+    height: 34px;
+
+    border: none;
+    border-radius: 5px;
+
+    background: transparent;
+
+    color: #8b8983;
+
+    font-size: 10px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.opcao-acesso.ativo {
+    background-color: #ffffff;
+
+    color: #111111;
+
+    box-shadow:
+        0 1px 5px rgba(0, 0, 0, 0.08);
+}
+
+.opcao-acesso:hover {
+    color: #111111;
+}
+
+
+.formulario-login {
+    display: flex;
+    flex-direction: column;
+
+    gap: 14px;
+}
+
+.grupo-formulario {
+    display: flex;
+    flex-direction: column;
+
+    gap: 7px;
+}
+
+.grupo-formulario label {
+    font-size: 10px;
+    font-weight: 600;
+
+    color: #202020;
+}
+
+.grupo-formulario input {
+    width: 100%;
+    height: 40px;
+
+    padding: 0 12px;
+
+    border: 1px solid #dedbd2;
+    border-radius: 5px;
+
+    outline: none;
+
+    background-color: #fffefa;
+
+    color: #111111;
+
+    font-size: 11px;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.grupo-formulario input::placeholder {
+    color: #b1aea7;
+}
+
+.grupo-formulario input:focus {
+    border-color: #c59d4a;
+
+    box-shadow:
+        0 0 0 3px rgba(197, 157, 74, 0.12);
+}
+
+
+/* =========================================
+   CAMPO DE SENHA
+========================================= */
+
+.campo-senha {
+    position: relative;
+}
+
+.campo-senha input {
+    padding-right: 40px;
+}
+
+.alternar-senha {
+    position: absolute;
+
+    top: 50%;
+    right: 10px;
+
+    transform: translateY(-50%);
+
+    border: none;
+
+    background: transparent;
+
+    color: #99958d;
+
+    cursor: pointer;
+
+    font-size: 13px;
+}
+
+
+/* =========================================
+   OPÇÕES
+========================================= */
+
+.opcoes-formulario {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 1px;
+
+    font-size: 9px;
+}
+
+.manter-conectado {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+
+    color: #8b8780;
+
+    cursor: pointer;
+}
+
+.manter-conectado input {
+    width: 14px;
+    height: 14px;
+
+    accent-color: #191919;
+
+    cursor: pointer;
+}
+
+.esqueci-senha {
+    color: #a4773f;
+
+    text-decoration: none;
+
+    transition: color 0.2s ease;
+}
+
+.esqueci-senha:hover {
+    color: #111111;
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   BOTÃO
+========================================= */
+
+.botao-login {
+    width: 100%;
+    height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 14px;
+
+    border: none;
+    border-radius: 6px;
+
+    background-color: #151515;
+
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.botao-login .seta {
+    color: #e4b531;
+
+    font-size: 17px;
+}
+
+.botao-login:hover {
+    background-color: #292929;
+
+    transform: translateY(-1px);
+}
+
+.botao-login:active {
+    transform: translateY(0);
+}
+
+.botao-login:focus-visible {
+    outline: 3px solid rgba(228, 181, 49, 0.35);
+    outline-offset: 2px;
+}
+
+
+/* =========================================
+   DEMONSTRAÇÃO
+========================================= */
+
+.acesso-demonstracao {
+    padding: 15px 0 17px;
+
+    border-bottom: 1px solid #ebe8df;
+
+    text-align: center;
+}
+
+.acesso-demonstracao p {
+    font-size: 9px;
+
+    color: #aaa59c;
+}
+
+.acesso-demonstracao strong {
+    font-weight: 500;
+
+    color: #8c887f;
+}
+
+
+/* =========================================
+   SEGURANÇA
+========================================= */
+
+.mensagem-seguranca {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    gap: 8px;
+
+    padding-top: 15px;
+
+    font-size: 8px;
+
+    color: #a9a59c;
+
+    letter-spacing: 0.3px;
+}
+
+.mensagem-seguranca span:first-child {
+    color: #8aa99a;
+
+    font-size: 11px;
+}
+
+
+/* =========================================
+   RESPONSIVIDADE
+========================================= */
+
+@media (max-width: 900px) {
+
+    .marca {
+        left: 30px;
+    }
+
+    .decoracao-tesoura {
+        left: 3%;
+        opacity: 0.5;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .pagina-login {
+        padding: 85px 15px 30px;
+    }
+
+    .marca {
+        top: 20px;
+        left: 20px;
+    }
+
+    .texto-marca h1 {
+        font-size: 17px;
+    }
+
+    .decoracao-tesoura {
+        display: none;
+    }
+
+    .cartao-login {
+        padding: 30px 22px 25px;
+
+        border-radius: 9px;
+    }
+
+    .cabecalho-login h2 {
+        font-size: 29px;
+    }
+
+    .cabecalho-login p {
+        font-size: 11px;
+    }
+}
+
+
+@media (max-width: 380px) {
+
+    .pagina-login {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .cartao-login {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .cabecalho-login h2 {
+        font-size: 27px;
+    }
+}

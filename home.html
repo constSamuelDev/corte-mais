@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="Painel de gestão da barbearia Corte Mais">
+	<title>Corte Mais | Painel</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="home.css">
+</head>
+
+<body class="painel-aplicativo">
+	<div class="estrutura-painel">
+		<aside class="barra-lateral" aria-label="Navegação principal">
+			<a class="marca-painel" href="home.html" aria-label="Corte Mais, início">
+				<span class="simbolo-marca" aria-hidden="true">
+					<svg viewBox="0 0 24 24" focusable="false">
+						<circle cx="6" cy="6" r="3"></circle>
+						<circle cx="6" cy="18" r="3"></circle>
+						<path d="m8.1 8.1 11.8 11.8M20 4 8.1 15.9M12 12l3-3"></path>
+					</svg>
+				</span>
+				<span class="nome-marca">CORTE MAIS<small>BARBER OPS</small></span>
+			</a>
+
+			<div class="menu-negocio">
+				<button class="seletor-negocio" type="button" aria-label="Abrir menu da barbearia" aria-expanded="false" aria-controls="menu-negocio">
+					<span class="avatar avatar-negocio" data-avatar-iniciais>NB</span>
+					<span class="dados-negocio"><small data-campo="negocio">Minha barbearia</small><strong data-campo="nome">Novo barbeiro</strong></span>
+					<span class="icone-chevron" aria-hidden="true">⌄</span>
+				</button>
+				<div class="painel-menu-negocio" id="menu-negocio" hidden>
+					<span class="rotulo-menu-negocio">CONTA ATUAL</span>
+					<strong data-campo="nome">Novo barbeiro</strong>
+					<span data-campo="negocio">Minha barbearia</span>
+					<div class="acoes-menu-negocio">
+						<button type="button" data-visao="perfil">Ver perfil</button>
+						<button type="button" data-acao="editar-perfil">Editar dados</button>
+					</div>
+				</div>
+			</div>
+
+			<nav class="navegacao-painel">
+				<div class="grupo-navegacao">
+					<span class="titulo-navegacao">WORKSPACE</span>
+					<a class="link-navegacao ativo" href="#visao-geral" data-visao="visao-geral" aria-current="page">
+						<span class="icone-nav" aria-hidden="true">◈</span><span>Visão geral</span>
+					</a>
+					<a class="link-navegacao" href="#agenda" data-visao="agenda">
+						<span class="icone-nav" aria-hidden="true">▦</span><span>Agenda</span><span class="contador-nav" data-campo="agendamentos-hoje">4</span>
+					</a>
+					<a class="link-navegacao" href="#clientes" data-visao="clientes">
+						<span class="icone-nav" aria-hidden="true">◎</span><span>Clientes</span>
+					</a>
+					<a class="link-navegacao" href="#perfil" data-visao="perfil">
+						<span class="icone-nav" aria-hidden="true">✦</span><span>Meu perfil</span>
+					</a>
+				</div>
+
+				<div class="grupo-navegacao">
+					<span class="titulo-navegacao">GESTÃO</span>
+					<a class="link-navegacao" href="#financeiro" data-visao="financeiro">
+						<span class="icone-nav" aria-hidden="true">↗</span><span>Financeiro</span>
+					</a>
+					<a class="link-navegacao" href="#estoque" data-visao="estoque">
+						<span class="icone-nav" aria-hidden="true">▤</span><span>Estoque</span>
+					</a>
+					<a class="link-navegacao" href="#conteudo" data-visao="conteudo">
+						<span class="icone-nav" aria-hidden="true">▢</span><span>Conteúdo</span>
+					</a>
+				</div>
+			</nav>
+
+			<a class="botao-sair" href="index.html"><span aria-hidden="true">↪</span> Sair da conta</a>
+		</aside>
+
+		<div class="area-aplicativo">
+			<header class="barra-superior">
+				<div class="saudacao-topo">
+					<span class="data-atual" id="data-atual"></span>
+					<p>Bom dia, <strong data-campo="primeiro-nome">Rafael</strong></p>
+				</div>
+
+				<div class="acoes-topo">
+					<label class="busca-painel">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+						<input type="search" id="busca-painel" placeholder="Buscar" aria-label="Buscar no painel">
+						<kbd>⌘ K</kbd>
+					</label>
+					<div class="area-perfil">
+						<button class="botao-perfil" type="button" aria-label="Perfil do barbeiro" aria-expanded="false" aria-controls="menu-perfil">
+							<span class="avatar avatar-perfil-topo" data-avatar-iniciais>NB</span>
+						</button>
+						<div class="painel-flutuante menu-perfil" id="menu-perfil" hidden>
+							<strong data-campo="nome">Rafael Costa</strong><span data-campo="email">rafael@cortemais.com</span>
+							<button type="button" data-visao="perfil">Ver meu perfil</button>
+						</div>
+					</div>
+				</div>
+			</header>
+
+			<main class="conteudo-painel" id="conteudo-principal" tabindex="-1"></main>
+		</div>
+	</div>
+
+	<dialog class="dialogo-cliente" id="dialogo-principal" aria-label="Formulário do painel"></dialog>
+
+	<div class="aviso-flutuante" id="aviso-flutuante" role="status" aria-live="polite"></div>
+
+	<script src="home.js" defer></script>
+</body>
+
+</html>

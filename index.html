@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="Acesso ao sistema Corte Mais">
+
+    <title>Corte Mais | Login</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="pagina-login">
+
+        <!-- Logo -->
+        <header class="marca">
+            <div class="icone-marca" aria-hidden="true">
+                <span></span>
+            </div>
+
+            <div class="texto-marca">
+                <h1>CORTE MAIS</h1>
+                <span>BARBER OPS</span>
+            </div>
+        </header>
+
+        <!-- Elemento decorativo -->
+        <div class="decoracao-tesoura" aria-hidden="true">
+            ✂
+        </div>
+
+        <!-- Card de login -->
+        <section class="cartao-login">
+
+            <div class="cabecalho-login">
+                <span class="rotulo-login">ACESSO SEGURO</span>
+
+                <h2>
+                    Sua rotina,<br>
+                    <span>no seu ritmo.</span>
+                </h2>
+
+                <p>
+                    Entre para cuidar da agenda, dos clientes e do caixa em
+                    um só lugar.
+                </p>
+            </div>
+
+            <!-- Tipo de acesso -->
+            <div class="tipo-acesso" role="tablist" aria-label="Tipo de acesso">
+
+                <button
+                    type="button"
+                    class="opcao-acesso ativo"
+                    role="tab"
+                    aria-selected="true">
+                    Sou barbeiro
+                </button>
+
+                <button
+                    type="button"
+                    class="opcao-acesso"
+                    role="tab"
+                    aria-selected="false">
+                    Sou cliente
+                </button>
+
+            </div>
+
+            <!-- Formulário -->
+            <form class="formulario-login">
+
+                <!-- E-mail -->
+                <div class="grupo-formulario">
+
+                    <label for="email">E-mail</label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="seuemail@email.com"
+                        autocomplete="email"
+                        required>
+
+                </div>
+
+                <!-- Senha -->
+                <div class="grupo-formulario">
+
+                    <label for="password">Senha</label>
+
+                    <div class="campo-senha">
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Digite sua senha"
+                            autocomplete="current-password"
+                            required>
+
+                        <button
+                            type="button"
+                            class="alternar-senha"
+                            aria-label="Mostrar senha">
+                            ◉
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="opcoes-formulario">
+
+                    <label class="manter-conectado">
+
+                        <input
+                            type="checkbox"
+                            name="remember">
+
+                        <span>Manter conectado</span>
+
+                    </label>
+
+                    <a href="#" class="esqueci-senha">
+                        Esqueci minha senha
+                    </a>
+
+                </div>
+
+                <button type="submit" class="botao-login">
+                    <span>Entrar no Corte Mais</span>
+                    <span class="seta" aria-hidden="true">→</span>
+                </button>
+
+            </form>
+
+            
+            <div class="acesso-demonstracao">
+
+                <p>
+                    Acesso de demonstração:
+                    <strong>rafael@cortemais.com</strong>
+                    -
+                    <strong>senha123456</strong>
+                </p>
+
+            </div>
+
+           
+            <div class="mensagem-seguranca">
+
+                <span aria-hidden="true">✓</span>
+
+                <span>
+                    Seus dados ficam protegidos e sincronizados
+                </span>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</body>
+
+</html>

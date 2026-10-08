@@ -10,7 +10,7 @@ html {
 
 body {
     min-height: 100vh;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: "Barlow", "Segoe UI", sans-serif;
     color: #111111;
     background-color: #f8f7f2;
 }
@@ -87,21 +87,11 @@ body {
 }
 
 .texto-marca h1 {
+    font-family: "Barlow Condensed", "Barlow", sans-serif;
     font-size: 19px;
     font-weight: 700;
     letter-spacing: 2px;
     line-height: 1;
-}
-
-.texto-marca span {
-    display: block;
-
-    margin-top: 4px;
-
-    font-size: 7px;
-    letter-spacing: 2px;
-
-    color: #77736c;
 }
 
 .decoracao-tesoura {
@@ -160,12 +150,13 @@ body {
 }
 
 .cabecalho-login h2 {
+    font-family: "Barlow Condensed", "Barlow", sans-serif;
     font-size: 34px;
     font-weight: 700;
 
     line-height: 1.02;
 
-    letter-spacing: -1.5px;
+    letter-spacing: 0;
 
     color: #111111;
 }

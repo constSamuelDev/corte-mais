@@ -8,7 +8,7 @@
     min-height: 100vh;
     color: var(--texto);
     background: var(--fundo);
-    font-family: "DM Sans", "Segoe UI", sans-serif;
+    font-family: "Barlow", "Segoe UI", sans-serif;
     font-size: 13px;
 }
 
@@ -64,21 +64,11 @@
 }
 
 .nome-marca {
-    font-family: "Space Grotesk", sans-serif;
+    font-family: "Barlow Condensed", "Barlow", sans-serif;
     font-size: 17px;
     font-weight: 700;
     line-height: 1.05;
     letter-spacing: 1.5px;
-}
-
-.nome-marca small {
-    display: block;
-    margin-top: 5px;
-    color: #aaa69b;
-    font-family: "DM Sans", sans-serif;
-    font-size: 8px;
-    font-weight: 500;
-    letter-spacing: 1.8px;
 }
 
 .menu-negocio { position: relative; }
@@ -208,7 +198,7 @@
 }
 
 .data-atual, .sobretitulo { display: block; color: #8b877e; font-size: 9px; font-weight: 600; letter-spacing: 1.7px; }
-.saudacao-topo p { margin-top: 6px; font-family: "Space Grotesk", sans-serif; font-size: 20px; font-weight: 600; }
+.saudacao-topo p { margin-top: 6px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 22px; font-weight: 600; }
 .saudacao-topo strong { font-weight: 600; }
 .acoes-topo { display: flex; align-items: center; gap: 17px; }
 
@@ -246,7 +236,7 @@
 }
 
 .botao-icone:hover, .botao-so-icone:hover, .botao-fechar:hover { background: #eeece4; }
-.botao-perfil { width: 36px; height: 36px; background: #e3e2d9; }
+.botao-perfil { width: 36px; height: 36px; padding: 0; background: #e3e2d9; }
 .imagem-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .botao-perfil .imagem-avatar { border-radius: 50%; }
 .botao-perfil .avatar-fallback { width: 100%; height: 100%; background: #e3e2d9; }
@@ -274,7 +264,7 @@
 
 .conteudo-painel { width: min(100% - 108px, 1160px); margin: 0 auto; padding: 52px 0 40px; outline: 0; }
 .cabecalho-pagina { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 27px; }
-.cabecalho-pagina h1 { margin-top: 11px; font-family: "Space Grotesk", sans-serif; font-size: clamp(27px, 3vw, 39px); font-weight: 600; line-height: 1.1; }
+.cabecalho-pagina h1 { margin-top: 11px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: clamp(29px, 3vw, 42px); font-weight: 600; line-height: 1.1; }
 .cabecalho-pagina p { margin-top: 7px; color: #89857b; font-size: 12px; }
 
 .botao-primario {
@@ -306,7 +296,7 @@
 .tom-verde { color: #477c59; background: #e0eee4; }
 .tom-azul { color: #49748b; background: #e1edf1; }
 .tom-rosa { color: #a25f54; background: #f5e6df; }
-.valor-indicador { display: block; margin-top: 13px; font-family: "Space Grotesk", sans-serif; font-size: 25px; font-weight: 600; }
+.valor-indicador { display: block; margin-top: 13px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 27px; font-weight: 600; }
 .variacao-indicador { display: block; margin-top: 6px; color: #89857b; font-size: 9px; }
 .variacao-indicador b { margin-right: 3px; color: #548461; font-size: 12px; }
 .grade-conteudo { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .85fr); gap: 16px; }
@@ -314,7 +304,7 @@
 .painel-agenda, .painel-clientes, .pagina-lista, .tabela-clientes { padding: 21px 20px 0; }
 .cabecalho-painel { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; margin-bottom: 13px; }
 .cabecalho-painel .sobretitulo { font-size: 8px; }
-.cabecalho-painel h2 { margin-top: 5px; font-family: "Space Grotesk", sans-serif; font-size: 16px; font-weight: 600; }
+.cabecalho-painel h2 { margin-top: 5px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 18px; font-weight: 600; }
 .link-discreto, .rodape-lista { display: inline-flex; align-items: center; gap: 7px; border: 0; color: #77736a; background: transparent; font-size: 10px; cursor: pointer; }
 .link-discreto:hover, .rodape-lista:hover { color: #171717; }
 .link-discreto span, .rodape-lista span { color: #a27f16; font-size: 15px; }
@@ -329,7 +319,7 @@
     border-top: 1px solid #efede7;
 }
 
-.hora-agendamento { color: #5f5b53; font-family: "Space Grotesk", sans-serif; font-size: 11px; font-weight: 600; }
+.hora-agendamento { color: #5f5b53; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 13px; font-weight: 600; }
 .avatar-agendamento { width: 33px; height: 33px; background: #e7e2d5; }
 .dados-agendamento, .dados-cliente { display: grid; min-width: 0; gap: 4px; }
 .dados-agendamento strong, .dados-cliente strong { overflow: hidden; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
@@ -392,7 +382,7 @@
 }
 
 .grade-resumo-financeiro article span { color: #77746b; font-size: 10px; }
-.grade-resumo-financeiro article strong { font-family: "Space Grotesk", sans-serif; font-size: 22px; font-weight: 600; }
+.grade-resumo-financeiro article strong { font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 24px; font-weight: 600; }
 .grade-resumo-financeiro .texto-entrada { color: #477c59; }
 .grade-resumo-financeiro .texto-saida { color: #a25f54; }
 .tabela-financeira { padding: 20px; }
@@ -441,30 +431,30 @@
 .cartao-publicacao { overflow: hidden; border: 1px solid var(--linha); border-radius: 7px; background: #fff; }
 .imagem-publicacao { display: grid; width: 100%; height: 150px; object-fit: cover; place-items: center; color: #745b11; background: #f3edda; }
 .imagem-publicacao-vazia { background: linear-gradient(135deg, #f5e9bd, #e9e4d6 55%, #dcece2); }
-.imagem-publicacao-vazia span { font-family: "Space Grotesk", sans-serif; font-size: 44px; font-weight: 600; }
+.imagem-publicacao-vazia span { font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 44px; font-weight: 600; }
 .dados-publicacao { display: grid; gap: 9px; padding: 14px; }
 .dados-publicacao .sobretitulo { font-size: 8px; }
-.dados-publicacao h2 { font-family: "Space Grotesk", sans-serif; font-size: 16px; font-weight: 600; }
+.dados-publicacao h2 { font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 18px; font-weight: 600; }
 .dados-publicacao p { min-height: 32px; color: #858178; font-size: 10px; line-height: 1.5; }
 .dados-publicacao > strong { font-size: 12px; }
 .dados-publicacao .botao-remover { width: auto; height: auto; justify-self: start; padding: 0; color: #8b655e; border-radius: 0; font-size: 9px; }
 
 .cartao-perfil { display: flex; align-items: center; gap: 24px; max-width: 660px; padding: 28px; }
 .avatar-perfil-grande { width: 84px; height: 84px; background: #e9e2d8; font-size: 20px; }
-.cartao-perfil h2 { margin: 7px 0 4px; font-family: "Space Grotesk", sans-serif; font-size: 22px; font-weight: 600; }
+.cartao-perfil h2 { margin: 7px 0 4px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 24px; font-weight: 600; }
 .cartao-perfil p { margin-top: 4px; color: #858178; font-size: 11px; }
 .etiqueta-demo { display: inline-block; margin-top: 12px; padding: 5px 8px; border-radius: 12px; color: #80640e; background: #f8efca; font-size: 9px; }
 
 .modulo-em-construcao { display: flex; min-height: 300px; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
 .icone-modulo { display: grid; width: 48px; height: 48px; margin-bottom: 18px; place-items: center; border-radius: 12px; background: var(--amarelo); font-size: 22px; }
-.modulo-em-construcao h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; font-weight: 600; }
+.modulo-em-construcao h2 { font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 20px; font-weight: 600; }
 .modulo-em-construcao p { margin-top: 10px; color: #8d887e; font-size: 11px; line-height: 1.7; }
 
 .dialogo-cliente { width: min(100% - 32px, 490px); max-width: 490px; max-height: min(90vh, 720px); margin: auto; padding: 25px; border: 1px solid var(--linha); border-radius: 10px; color: var(--texto); background: var(--superficie); box-shadow: 0 24px 80px rgba(0, 0, 0, .18); }
 .dialogo-cliente::backdrop { background: rgba(19, 18, 15, .48); backdrop-filter: blur(2px); }
 .dialogo-cliente form { display: grid; gap: 15px; }
 .cabecalho-dialogo { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 3px; }
-.cabecalho-dialogo h2 { margin-top: 6px; font-family: "Space Grotesk", sans-serif; font-size: 22px; font-weight: 600; }
+.cabecalho-dialogo h2 { margin-top: 6px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: 24px; font-weight: 600; }
 .botao-fechar { width: 30px; height: 30px; font-size: 23px !important; }
 .dialogo-cliente label { display: grid; gap: 7px; color: #555148; font-size: 10px; font-weight: 600; }
 .dialogo-cliente input, .dialogo-cliente select, .dialogo-cliente textarea { width: 100%; min-width: 0; padding: 0 11px; border: 1px solid #dedbd2; border-radius: 5px; outline: 0; color: var(--texto); background: #fffefa; font-size: 11px; }
@@ -489,7 +479,7 @@
 }
 
 @media (max-width: 760px) {
-    .barra-lateral { position: relative; inset: auto; width: 100%; max-width: 100vw; overflow-x: hidden; padding: 13px 16px 0; }
+    .barra-lateral { position: relative; inset: auto; width: 100%; max-width: 100vw; overflow-x: hidden; padding: 13px 16px 16px; }
     .marca-painel { min-height: 38px; margin: 0 3px 12px; }
     .seletor-negocio, .botao-sair { display: none; }
     .navegacao-painel { width: 100%; min-width: 0; flex: 0 0 auto; flex-direction: row; gap: 17px; overflow: visible; padding: 0; }

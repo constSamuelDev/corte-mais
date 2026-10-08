@@ -239,6 +239,12 @@ body {
     gap: 14px;
 }
 
+.erro-login {
+    color: #a44435;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
 .grupo-formulario {
     display: flex;
     flex-direction: column;

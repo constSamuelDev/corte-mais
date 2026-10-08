@@ -73,13 +73,15 @@ body {
     transform: rotate(-15deg);
 }
 
-.icone-marca span {
-    width: 3px;
-    height: 17px;
+.icone-marca svg {
+    width: 21px;
+    height: 21px;
 
-    background-color: #e9b928;
-
-    border-radius: 5px;
+    fill: none;
+    stroke: #e9b928;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
 
     transform: rotate(15deg);
 }

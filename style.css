@@ -4,6 +4,10 @@
     box-sizing: border-box;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 html {
     font-size: 16px;
 }
@@ -358,6 +362,57 @@ body {
     text-decoration: none;
 
     transition: color 0.2s ease;
+}
+
+.modo-acesso {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin: -8px 0 18px;
+}
+
+.modo-acesso button {
+    min-height: 33px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: #77736b;
+    background: transparent;
+    font-size: 11px;
+}
+
+.modo-acesso button:hover,
+.modo-acesso button.modo-acesso-ativo {
+    border-color: #e5e1d7;
+    color: #191919;
+    background: #fffefa;
+}
+
+.opcoes-formulario .dica-senha {
+    color: #8b8780;
+}
+
+.opcoes-formulario .esqueci-senha {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.opcoes-formulario .esqueci-senha:hover {
+    color: #75562c;
+}
+
+.erro-login.status-erro {
+    padding: 9px 10px;
+    border-radius: 5px;
+    color: #a44435;
+    background: #f8e9e5;
+}
+
+.botao-login:disabled {
+    cursor: wait;
+    opacity: 0.65;
 }
 
 .esqueci-senha:hover {

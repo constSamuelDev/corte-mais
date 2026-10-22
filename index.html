@@ -4,11 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="description" content="Acesso ao sistema Corte Mais">
-
-    <title>Corte Mais | Login</title>
-
+    <meta name="description" content="Entre ou crie sua conta no Corte Mais">
+    <title>Corte Mais | Acesso</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -16,10 +13,7 @@
 </head>
 
 <body>
-
     <main class="pagina-login">
-
-        <!-- Logo -->
         <header class="marca">
             <div class="icone-marca" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
@@ -28,155 +22,67 @@
                     <path d="m8.1 8.1 11.8 11.8M20 4 8.1 15.9M12 12l3-3"></path>
                 </svg>
             </div>
-
-            <div class="texto-marca">
-                <h1>CORTE MAIS</h1>
-            </div>
+            <div class="texto-marca"><h1>CORTE MAIS</h1></div>
         </header>
 
-        <!-- Elemento decorativo -->
-        <div class="decoracao-tesoura" aria-hidden="true">
-            ✂
-        </div>
+        <div class="decoracao-tesoura" aria-hidden="true">✂</div>
 
-        <!-- Card de login -->
         <section class="cartao-login">
-
             <div class="cabecalho-login">
-                <span class="rotulo-login">ACESSO SEGURO</span>
-
-                <h2>
-                    Sua rotina,<br>
-                    <span>no seu ritmo.</span>
-                </h2>
-
-                <p>
-                    Entre para cuidar da agenda, dos clientes e do caixa em
-                    um só lugar.
-                </p>
+                <span class="rotulo-login">ACESSO AO CORTE MAIS</span>
+                <h2 id="titulo-acesso">Sua rotina,<br><span>no seu ritmo.</span></h2>
+                <p id="descricao-acesso">Entre para encontrar barbeiros, acompanhar novidades e organizar seus horários.</p>
             </div>
 
-            <!-- Tipo de acesso -->
-            <div class="tipo-acesso" role="tablist" aria-label="Tipo de acesso">
-
-                <button
-                    type="button"
-                    class="opcao-acesso ativo"
-                    role="tab"
-                    aria-selected="true">
-                    Sou barbeiro
-                </button>
-
-                <button
-                    type="button"
-                    class="opcao-acesso"
-                    role="tab"
-                    aria-selected="false">
-                    Sou cliente
-                </button>
-
+            <div class="tipo-acesso" role="tablist" aria-label="Tipo de conta">
+                <button type="button" class="opcao-acesso ativo" role="tab" aria-selected="true" data-role="barber">Sou barbeiro</button>
+                <button type="button" class="opcao-acesso" role="tab" aria-selected="false" data-role="customer">Sou cliente</button>
             </div>
 
-            <!-- Formulário -->
-            <form class="formulario-login">
+            <div class="modo-acesso" role="group" aria-label="Ação da conta">
+                <button type="button" class="modo-acesso-ativo" id="modo-entrar">Entrar</button>
+                <button type="button" id="modo-criar">Criar conta</button>
+            </div>
 
-                <!-- E-mail -->
+            <form class="formulario-login" id="formulario-acesso">
+                <div class="grupo-formulario campo-cadastro" id="campo-nome" hidden>
+                    <label for="full-name">Nome</label>
+                    <input type="text" id="full-name" name="full_name" autocomplete="name" maxlength="100">
+                </div>
+                <div class="grupo-formulario campo-cadastro" id="campo-barbearia" hidden>
+                    <label for="shop-name">Nome da barbearia</label>
+                    <input type="text" id="shop-name" name="shop_name" maxlength="100">
+                </div>
                 <div class="grupo-formulario">
-
                     <label for="email">E-mail</label>
-
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="seuemail@email.com"
-                        autocomplete="email"
-                        required>
-
+                    <input type="email" id="email" name="email" placeholder="seuemail@email.com" autocomplete="email" required>
                 </div>
-
-                <!-- Senha -->
                 <div class="grupo-formulario">
-
                     <label for="password">Senha</label>
-
                     <div class="campo-senha">
-
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="Digite sua senha"
-                            autocomplete="current-password"
-                            required>
-
-                        <button
-                            type="button"
-                            class="alternar-senha"
-                            aria-label="Mostrar senha">
-                            ◉
-                        </button>
-
+                        <input type="password" id="password" name="password" placeholder="Mínimo de 8 caracteres" autocomplete="current-password" minlength="8" required>
                     </div>
-
                 </div>
 
-                <div class="opcoes-formulario">
-
-                    <label class="manter-conectado">
-
-                        <input
-                            type="checkbox"
-                            name="remember">
-
-                        <span>Manter conectado</span>
-
-                    </label>
-
-                    <a href="#" class="esqueci-senha">
-                        Esqueci minha senha
-                    </a>
-
+                <div class="opcoes-formulario" id="opcoes-login">
+                    <span class="dica-senha">Use pelo menos 8 caracteres.</span>
+                    <button type="button" class="esqueci-senha" id="recuperar-senha">Esqueci minha senha</button>
                 </div>
 
-                <p class="erro-login" id="erro-login" role="alert" hidden></p>
-
-                <button type="submit" class="botao-login">
+                <p class="erro-login" id="status-acesso" role="status" aria-live="polite" hidden></p>
+                <button type="submit" class="botao-login" id="botao-acesso">
                     <span>Entrar no Corte Mais</span>
                     <span class="seta" aria-hidden="true">→</span>
                 </button>
-
             </form>
 
-            
-            <div class="acesso-demonstracao">
-
-                <p>
-                    Acesso de demonstração:
-                    <strong>tonao@gmail.com</strong>
-                    -
-                    <strong>123456789</strong>
-                </p>
-
-            </div>
-
-           
             <div class="mensagem-seguranca">
-
                 <span aria-hidden="true">✓</span>
-
-                <span>
-                    Seus dados ficam protegidos e sincronizados
-                </span>
-
+                <span>Seus dados ficam protegidos pela sua conta</span>
             </div>
-
         </section>
-
     </main>
-
-<script src="index.js" defer></script>
-
+    <script type="module" src="index.js"></script>
 </body>
 
 </html>

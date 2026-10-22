@@ -1,402 +1,401 @@
-const CHAVE_DADOS_PAINEL = "corte-mais.painel.v1";
-const estadoInicial = {
-    perfil: { nome: "", negocio: "", email: "", fotoPerfil: "" },
-    clientes: [],
-    agendamentos: [],
-    lancamentos: [],
-    estoque: [],
-    publicacoes: []
-};
+import { exigirSupabase } from "./supabase-client.js";
 
-function carregarEstado() {
+const main = document.querySelector("#app-main");
+const nav = document.querySelector("#app-nav");
+const dialog = document.querySelector("#app-dialog");
+const notice = document.querySelector("#app-notice");
+let supabase;
+let user;
+let profile;
+let view = "";
+let posts = [];
+let services = [];
+let bookings = [];
+let commentsByPost = {};
+
+const isBarber = () => profile.role === "barber";
+const safe = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+})[char]);
+const money = value => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const dateTime = value => new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium", timeStyle: "short"
+}).format(new Date(value));
+const dateToday = () => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+const usableImage = value => {
+    if (!value) return "";
     try {
-        const salvo = JSON.parse(localStorage.getItem(CHAVE_DADOS_PAINEL));
-        if (!salvo || typeof salvo !== "object") return structuredClone(estadoInicial);
-        return {
-            ...structuredClone(estadoInicial),
-            ...salvo,
-            perfil: { ...estadoInicial.perfil, ...(salvo.perfil || {}) },
-            clientes: Array.isArray(salvo.clientes) ? salvo.clientes : [],
-            agendamentos: Array.isArray(salvo.agendamentos) ? salvo.agendamentos : [],
-            lancamentos: Array.isArray(salvo.lancamentos) ? salvo.lancamentos : [],
-            estoque: Array.isArray(salvo.estoque) ? salvo.estoque : [],
-            publicacoes: Array.isArray(salvo.publicacoes) ? salvo.publicacoes : []
-        };
+        const url = new URL(value);
+        return ["https:", "http:"].includes(url.protocol) ? url.href : "";
     } catch {
-        return structuredClone(estadoInicial);
+        return "";
     }
-}
-
-const estado = carregarEstado();
-const conteudoPrincipal = document.querySelector("#conteudo-principal");
-const buscaPainel = document.querySelector("#busca-painel");
-const dialogo = document.querySelector("#dialogo-principal");
-let visaoAtual = "visao-geral";
-let termoBusca = "";
-let acaoFormulario = null;
-
-const icones = {
-    agenda: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>',
-    clientes: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M20 8v6M23 11h-6"></path></svg>',
-    financeiro: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18M7 15h3"></path></svg>',
-    retorno: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"></path><path d="M3 3v5h5M12 7v5l3 2"></path></svg>'
 };
 
-function salvarEstado() {
-    localStorage.setItem(CHAVE_DADOS_PAINEL, JSON.stringify(estado));
+function showNotice(message, isError = false) {
+    notice.textContent = message;
+    notice.classList.add("visible");
+    notice.style.background = isError ? "#9c3e32" : "";
+    window.clearTimeout(showNotice.timer);
+    showNotice.timer = window.setTimeout(() => notice.classList.remove("visible"), 3500);
 }
 
-function escapar(valor = "") {
-    return String(valor).replace(/[&<>"']/g, caractere => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[caractere]);
+function renderError(error) {
+    console.error(error);
+    main.innerHTML = `<div class="error-state"><strong>Não foi possível carregar esta página.</strong><p>${safe(error.message || "Verifique a conexão e a configuração do Supabase.")}</p><button class="button" data-action="reload" type="button">Tentar novamente</button></div>`;
 }
 
-function iniciais(nome = "") {
-    const partes = nome.trim().split(/\s+/).filter(Boolean);
-    return partes.length ? partes.slice(0, 2).map(parte => parte[0]).join("").toLocaleUpperCase("pt-BR") : "NB";
+function navigation() {
+    const pages = isBarber()
+        ? [["posts", "Conteúdo"], ["services", "Serviços"], ["bookings", "Agenda"], ["profile", "Meu perfil"]]
+        : [["feed", "Feed"], ["bookings", "Meus agendamentos"], ["profile", "Meu perfil"]];
+    nav.innerHTML = pages.map(([id, label]) =>
+        `<button class="nav-button ${view === id ? "active" : ""}" data-view="${id}" type="button" ${view === id ? 'aria-current="page"' : ""}>${label}</button>`
+    ).join("");
 }
 
-function idNovo(prefixo) {
-    return `${prefixo}_${crypto.randomUUID()}`;
+function pageHeading(eyebrow, title, description, action = "") {
+    return `<header class="page-heading"><div><span class="eyebrow">${safe(eyebrow)}</span><h1>${safe(title)}</h1><p>${safe(description)}</p></div>${action}</header>`;
 }
 
-function moeda(valor) {
-    return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function dataISO() {
-    const agora = new Date();
-    const local = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 10);
-}
-
-function formatarData(valor) {
-    if (!valor) return "Sem data";
-    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${valor}T12:00:00`));
-}
-
-function atualizarIdentidade() {
-    const nome = estado.perfil.nome || "Novo barbeiro";
-    const negocio = estado.perfil.negocio || "Minha barbearia";
-    const primeiroNome = estado.perfil.nome.trim().split(/\s+/)[0] || "barbeiro";
-    document.querySelectorAll('[data-campo="nome"]').forEach(item => item.textContent = nome);
-    document.querySelectorAll('[data-campo="email"]').forEach(item => item.textContent = estado.perfil.email || "E-mail não informado");
-    document.querySelectorAll('[data-campo="negocio"]').forEach(item => item.textContent = negocio);
-    document.querySelectorAll('[data-campo="primeiro-nome"]').forEach(item => item.textContent = primeiroNome);
-    document.querySelectorAll("[data-avatar-iniciais]").forEach(item => item.textContent = iniciais(estado.perfil.nome));
-    document.querySelector(".botao-perfil").setAttribute("aria-label", `Perfil de ${nome}`);
-    document.querySelector("#data-atual").textContent = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(new Date()).toLocaleUpperCase("pt-BR");
-    document.querySelector('[data-campo="agendamentos-hoje"]').textContent = estado.agendamentos.filter(item => item.data === dataISO()).length;
-    document.querySelector("#menu-perfil strong").textContent = nome;
-    document.querySelector("#menu-perfil > span").textContent = estado.perfil.email || "Configure seu e-mail";
-    document.querySelector(".seletor-negocio").setAttribute("aria-label", `${negocio}, ${nome}`);
-}
-
-function cabecalho(rotulo, titulo, descricao, acao = "") {
-    return `<div class="cabecalho-pagina"><div><span class="sobretitulo">${escapar(rotulo)}</span><h1>${escapar(titulo)}</h1><p>${escapar(descricao)}</p></div>${acao}</div>`;
-}
-
-function botaoAcao(acao, texto, simbolo = "+") {
-    return `<button class="botao-primario" type="button" data-acao="${acao}"><span aria-hidden="true">${simbolo}</span>${texto}</button>`;
-}
-
-function lancamentosDoMes() {
-    const mes = dataISO().slice(0, 7);
-    return estado.lancamentos.filter(item => item.data?.startsWith(mes));
-}
-
-function totaisFinanceiros() {
-    const itens = lancamentosDoMes();
-    const entradas = itens.filter(item => item.tipo === "entrada").reduce((soma, item) => soma + Number(item.valor), 0);
-    const saidas = itens.filter(item => item.tipo === "saida").reduce((soma, item) => soma + Number(item.valor), 0);
-    return { entradas, saidas, saldo: entradas - saidas };
-}
-
-function renderizarIndicadores() {
-    const totais = totaisFinanceiros();
-    const itens = [
-        { titulo: "Agendamentos hoje", valor: estado.agendamentos.filter(item => item.data === dataISO()).length, variacao: "Nenhum horário cadastrado", icone: "agenda", tom: "amarelo" },
-        { titulo: "Clientes cadastrados", valor: estado.clientes.length, variacao: "Sua base de clientes", icone: "clientes", tom: "verde" },
-        { titulo: "Entradas no mês", valor: moeda(totais.entradas), variacao: "Receitas registradas", icone: "financeiro", tom: "azul" },
-        { titulo: "Saldo do mês", valor: moeda(totais.saldo), variacao: `${moeda(totais.saidas)} em saídas`, icone: "retorno", tom: "rosa" }
-    ];
-    return `<section class="grade-indicadores" aria-label="Resumo do negócio">${itens.map(item => `<article class="cartao-indicador"><div class="topo-indicador"><span>${escapar(item.titulo)}</span><span class="icone-indicador tom-${item.tom}">${icones[item.icone]}</span></div><strong class="valor-indicador">${escapar(item.valor)}</strong><span class="variacao-indicador">${escapar(item.variacao)}</span></article>`).join("")}</section>`;
-}
-
-function renderizarVisaoGeral() {
-    const clientes = estado.clientes.filter(item => `${item.nome} ${item.email || ""}`.toLocaleLowerCase("pt-BR").includes(termoBusca.toLocaleLowerCase("pt-BR")));
-    const proximos = estado.agendamentos.filter(item => `${item.cliente} ${item.servico}`.toLocaleLowerCase("pt-BR").includes(termoBusca.toLocaleLowerCase("pt-BR"))).slice(0, 4);
-    const listaAgendamentos = proximos.length ? proximos.map(item => `<article class="linha-agendamento"><time class="hora-agendamento">${escapar(item.horario || "--:--")}</time><span class="avatar avatar-agendamento">${escapar(iniciais(item.cliente))}</span><div class="dados-agendamento"><strong>${escapar(item.cliente)}</strong><span>${escapar(item.servico)}</span></div><span class="estado-agendamento estado-confirmado">${escapar(item.status || "Agendado")}</span></article>`).join("") : '<p class="estado-vazio">Sua agenda está vazia. Cadastre os primeiros horários para acompanhar o dia por aqui.</p>';
-    const listaClientes = clientes.length ? clientes.slice(0, 4).map(item => `<article class="linha-cliente"><span class="avatar avatar-cliente">${escapar(iniciais(item.nome))}</span><div class="dados-cliente"><strong>${escapar(item.nome)}</strong><span>${escapar(item.email || "Cliente cadastrado")}</span></div></article>`).join("") : '<p class="estado-vazio">Nenhum cliente cadastrado ainda.</p>';
-    conteudoPrincipal.innerHTML = `${cabecalho("VISÃO GERAL", "Bem-vindo ao Corte Mais.", "Comece organizando sua barbearia. Seus dados aparecerão neste painel.", botaoAcao("adicionar-cliente", "Adicionar cliente"))}${renderizarIndicadores()}<div class="grade-conteudo"><section class="painel-conteudo painel-agenda"><div class="cabecalho-painel"><div><span class="sobretitulo">ROTINA</span><h2>Próximos atendimentos</h2></div><button class="link-discreto" type="button" data-visao="agenda">Abrir agenda <span aria-hidden="true">→</span></button></div><div class="lista-agendamentos">${listaAgendamentos}</div></section><section class="painel-conteudo painel-clientes"><div class="cabecalho-painel"><div><span class="sobretitulo">RELACIONAMENTO</span><h2>Seus clientes</h2></div><button class="botao-so-icone" type="button" data-visao="clientes" aria-label="Ver clientes">→</button></div><div class="lista-clientes">${listaClientes}</div><button class="rodape-lista" type="button" data-visao="clientes">Abrir clientes <span aria-hidden="true">→</span></button></section></div>`;
-}
-
-function renderizarAgenda() {
-    const busca = termoBusca.toLocaleLowerCase("pt-BR");
-    const lista = estado.agendamentos.filter(item => `${item.cliente} ${item.servico}`.toLocaleLowerCase("pt-BR").includes(busca));
-    const linhas = lista.length ? lista.map(item => `<article class="linha-agendamento"><time class="hora-agendamento">${escapar(item.horario || "--:--")}</time><span class="avatar avatar-agendamento">${escapar(iniciais(item.cliente))}</span><div class="dados-agendamento"><strong>${escapar(item.cliente)}</strong><span>${escapar(item.servico)}</span></div><span class="estado-agendamento estado-confirmado">${escapar(formatarData(item.data))}</span></article>`).join("") : '<p class="estado-vazio">Nenhum atendimento na agenda. A agenda ficará pronta para receber novos horários.</p>';
-    conteudoPrincipal.innerHTML = `${cabecalho("ROTINA", "Agenda", "Organize horários e serviços dos seus clientes.", botaoAcao("novo-agendamento", "Novo agendamento"))}<section class="painel-conteudo pagina-lista"><div class="cabecalho-painel"><div><span class="sobretitulo">AGENDA</span><h2>${lista.length} horários cadastrados</h2></div></div><div class="lista-agendamentos">${linhas}</div></section>`;
-}
-
-function renderizarClientes() {
-    const busca = termoBusca.toLocaleLowerCase("pt-BR");
-    const clientes = estado.clientes.filter(item => `${item.nome} ${item.email || ""} ${item.telefone || ""}`.toLocaleLowerCase("pt-BR").includes(busca));
-    const lista = clientes.length ? clientes.map(item => `<article class="linha-cliente"><span class="avatar avatar-cliente">${escapar(iniciais(item.nome))}</span><div class="dados-cliente"><strong>${escapar(item.nome)}</strong><span>${escapar(item.email || item.telefone || "Sem contato informado")}</span></div><button class="botao-remover" type="button" data-acao="remover-cliente" data-id="${escapar(item.id)}" aria-label="Remover ${escapar(item.nome)}">×</button></article>`).join("") : '<p class="estado-vazio">Ainda não há clientes. Cadastre o primeiro para começar sua base.</p>';
-    conteudoPrincipal.innerHTML = `${cabecalho("RELACIONAMENTO", "Clientes", "Cadastre e acompanhe as informações dos seus clientes.", botaoAcao("adicionar-cliente", "Adicionar cliente"))}<section class="painel-conteudo tabela-clientes"><div class="cabecalho-painel"><div><span class="sobretitulo">SUA COMUNIDADE</span><h2>${estado.clientes.length} clientes cadastrados</h2></div></div><div class="lista-clientes lista-clientes-completa">${lista}</div></section>`;
-}
-
-function renderizarPerfil() {
-    const nome = estado.perfil.nome || "Configure seu perfil";
-    const linhas = `<p>${escapar(estado.perfil.email || "Adicione seu e-mail de contato")}</p><p>${escapar(estado.perfil.negocio || "Adicione o nome da barbearia")}</p>`;
-    conteudoPrincipal.innerHTML = `${cabecalho("CONTA", "Meu perfil", "Configure seus dados para personalizar o painel.", botaoAcao("editar-perfil", "Editar perfil"))}<section class="painel-conteudo cartao-perfil"><span class="avatar avatar-perfil-grande">${escapar(iniciais(estado.perfil.nome))}</span><div><span class="sobretitulo">BARBEIRO</span><h2>${escapar(nome)}</h2>${linhas}<span class="etiqueta-demo">Perfil local</span></div></section>`;
-}
-
-function renderizarFinanceiro() {
-    const totais = totaisFinanceiros();
-    const busca = termoBusca.toLocaleLowerCase("pt-BR");
-    const lista = estado.lancamentos.filter(item => `${item.descricao} ${item.categoria}`.toLocaleLowerCase("pt-BR").includes(busca)).sort((a, b) => b.data.localeCompare(a.data));
-    const itens = lista.length ? lista.map(item => `<article class="linha-financeira"><span class="indicador-tipo ${item.tipo}">${item.tipo === "entrada" ? "↙" : "↗"}</span><div class="dados-lancamento"><strong>${escapar(item.descricao)}</strong><span>${escapar(item.categoria)} · ${formatarData(item.data)}</span></div><strong class="valor-lancamento ${item.tipo}">${item.tipo === "entrada" ? "+" : "−"} ${moeda(item.valor)}</strong><button class="botao-remover" type="button" data-acao="remover-lancamento" data-id="${escapar(item.id)}" aria-label="Remover lançamento">×</button></article>`).join("") : '<p class="estado-vazio">Nenhuma movimentação registrada. Adicione entradas de serviços ou despesas da barbearia.</p>';
-    conteudoPrincipal.innerHTML = `${cabecalho("GESTÃO", "Financeiro", "Controle as entradas, saídas e o saldo da sua empresa.", botaoAcao("novo-lancamento", "Adicionar lançamento"))}<section class="grade-resumo-financeiro"><article><span>Entradas neste mês</span><strong class="texto-entrada">${moeda(totais.entradas)}</strong></article><article><span>Saídas neste mês</span><strong class="texto-saida">${moeda(totais.saidas)}</strong></article><article><span>Saldo deste mês</span><strong>${moeda(totais.saldo)}</strong></article></section><section class="painel-conteudo tabela-financeira"><div class="cabecalho-painel"><div><span class="sobretitulo">MOVIMENTAÇÕES</span><h2>${estado.lancamentos.length} lançamentos</h2></div><span class="legenda-horario">MÊS ATUAL</span></div><div class="lista-financeira">${itens}</div></section>`;
-}
-
-function renderizarEstoque() {
-    const busca = termoBusca.toLocaleLowerCase("pt-BR");
-    const produtos = estado.estoque.filter(item => `${item.nome} ${item.categoria}`.toLocaleLowerCase("pt-BR").includes(busca));
-    const quantidadeTotal = estado.estoque.reduce((soma, item) => soma + Number(item.quantidade), 0);
-    const baixoEstoque = estado.estoque.filter(item => Number(item.quantidade) <= Number(item.minimo)).length;
-    const linhas = produtos.length ? produtos.map(item => `<article class="linha-estoque"><span class="icone-estoque" aria-hidden="true">▤</span><div class="dados-produto"><strong>${escapar(item.nome)}</strong><span>${escapar(item.categoria)}</span></div><span class="quantidade-produto ${Number(item.quantidade) <= Number(item.minimo) ? "estoque-baixo" : ""}">${item.quantidade} ${escapar(item.unidade || "un.")}</span><span class="custo-produto">${moeda(item.custoUnitario)} / un.</span><div class="acoes-produto"><button class="botao-secundario" type="button" data-acao="movimentar-estoque" data-id="${escapar(item.id)}" data-tipo="entrada">Entrada</button><button class="botao-secundario" type="button" data-acao="movimentar-estoque" data-id="${escapar(item.id)}" data-tipo="saida">Uso</button></div></article>`).join("") : '<p class="estado-vazio">Seu estoque está vazio. Cadastre utensílios e produtos para acompanhar quantidades e compras.</p>';
-    conteudoPrincipal.innerHTML = `${cabecalho("GESTÃO", "Estoque", "Acompanhe utensílios, produtos e compras da barbearia.", botaoAcao("novo-produto", "Adicionar item"))}<section class="grade-resumo-financeiro resumo-estoque"><article><span>Itens cadastrados</span><strong>${estado.estoque.length}</strong></article><article><span>Unidades em estoque</span><strong>${quantidadeTotal}</strong></article><article><span>Itens no mínimo</span><strong>${baixoEstoque}</strong></article></section><section class="painel-conteudo tabela-financeira"><div class="cabecalho-painel"><div><span class="sobretitulo">MATERIAIS E UTENSÍLIOS</span><h2>Estoque atual</h2></div></div><div class="lista-estoque">${linhas}</div></section><p class="nota-modulo">Compras registradas como entrada no estoque também são lançadas automaticamente como despesa no financeiro.</p>`;
-}
-
-function renderizarConteudo() {
-    const busca = termoBusca.toLocaleLowerCase("pt-BR");
-    const publicacoes = estado.publicacoes.filter(item => `${item.servico} ${item.descricao}`.toLocaleLowerCase("pt-BR").includes(busca));
-    const cards = publicacoes.length ? publicacoes.map(item => `<article class="cartao-publicacao">${item.imagem ? `<img class="imagem-publicacao" src="${escapar(item.imagem)}" alt="Imagem de ${escapar(item.servico)}" loading="lazy" onerror="this.remove()">` : `<div class="imagem-publicacao imagem-publicacao-vazia"><span>${escapar(iniciais(item.servico))}</span></div>`}<div class="dados-publicacao"><span class="sobretitulo">${escapar(item.status || "PUBLICADO")}</span><h2>${escapar(item.servico)}</h2><p>${escapar(item.descricao || "Serviço da barbearia")}</p><strong>${moeda(item.preco)}</strong><button class="botao-remover" type="button" data-acao="remover-publicacao" data-id="${escapar(item.id)}" aria-label="Remover publicação">Remover publicação</button></div></article>`).join("") : '<p class="estado-vazio">Você ainda não publicou serviços. Crie uma publicação para montar seu catálogo de serviços.</p>';
-    conteudoPrincipal.innerHTML = `${cabecalho("DIVULGAÇÃO", "Conteúdo", "Apresente seus serviços e monte um catálogo para seus clientes.", botaoAcao("nova-publicacao", "Nova publicação"))}<section class="painel-conteudo secao-publicacoes"><div class="cabecalho-painel"><div><span class="sobretitulo">SEUS SERVIÇOS</span><h2>${estado.publicacoes.length} publicações</h2></div></div><div class="grade-publicacoes">${cards}</div></section>`;
-}
-
-function renderizarVisao() {
-    atualizarIdentidade();
-    const renderizadores = {
-        "visao-geral": renderizarVisaoGeral,
-        agenda: renderizarAgenda,
-        clientes: renderizarClientes,
-        perfil: renderizarPerfil,
-        financeiro: renderizarFinanceiro,
-        estoque: renderizarEstoque,
-        conteudo: renderizarConteudo
-    };
-    (renderizadores[visaoAtual] || renderizarVisaoGeral)();
-    document.querySelectorAll(".link-navegacao[data-visao]").forEach(link => {
-        const selecionado = link.dataset.visao === visaoAtual;
-        link.classList.toggle("ativo", selecionado);
-        if (selecionado) link.setAttribute("aria-current", "page");
-        else link.removeAttribute("aria-current");
-    });
-}
-
-function campoForm(nome, rotulo, tipo = "text", opcoes = {}) {
-    const requerido = opcoes.requerido ? "required" : "";
-    const dica = opcoes.placeholder ? `placeholder="${escapar(opcoes.placeholder)}"` : "";
-    const valor = opcoes.valor ? `value="${escapar(opcoes.valor)}"` : "";
-    if (tipo === "select") {
-        const options = opcoes.opcoes.map(item => `<option value="${escapar(item)}">${escapar(item)}</option>`).join("");
-        return `<label>${rotulo}<select name="${nome}" ${requerido}>${options}</select></label>`;
-    }
-    if (tipo === "textarea") return `<label>${rotulo}<textarea name="${nome}" rows="3" ${dica}></textarea></label>`;
-    return `<label>${rotulo}<input name="${nome}" type="${tipo}" ${dica} ${valor} ${requerido} ${opcoes.min !== undefined ? `min="${opcoes.min}"` : ""} ${opcoes.step ? `step="${opcoes.step}"` : ""}></label>`;
-}
-
-function abrirFormulario(titulo, subtitulo, campos, textoBotao, aoSalvar) {
-    acaoFormulario = aoSalvar;
-    dialogo.innerHTML = `<form id="formulario-dinamico"><div class="cabecalho-dialogo"><div><span class="sobretitulo">${escapar(subtitulo)}</span><h2>${escapar(titulo)}</h2></div><button class="botao-fechar" type="button" aria-label="Fechar" data-fechar-dialogo>×</button></div>${campos}<div class="acoes-dialogo"><button class="botao-secundario" type="button" data-fechar-dialogo>Cancelar</button><button class="botao-primario" type="submit">${escapar(textoBotao)}</button></div></form>`;
-    dialogo.showModal();
-}
-
-function abrirCadastroCliente() {
-    abrirFormulario("Adicionar cliente", "RELACIONAMENTO", campoForm("nome", "Nome completo", "text", { requerido: true, placeholder: "Nome do cliente" }) + campoForm("email", "E-mail", "email", { placeholder: "cliente@email.com" }) + campoForm("telefone", "Telefone", "tel", { placeholder: "(11) 99999-9999" }), "Salvar cliente", campos => {
-        estado.clientes.push({ id: idNovo("cli"), nome: campos.get("nome").trim(), email: campos.get("email").trim(), telefone: campos.get("telefone").trim(), criadoEm: dataISO() });
-        visaoAtual = "clientes";
-        salvarEstado();
-        renderizarVisao();
-        mostrarAviso("Cliente adicionado.");
-    });
-}
-
-function abrirLancamento() {
-    const campos = campoForm("tipo", "Movimentação", "select", { opcoes: ["saida", "entrada"] }) + campoForm("descricao", "Descrição", "text", { requerido: true, placeholder: "Ex.: Corte, aluguel, conta de luz" }) + campoForm("categoria", "Categoria", "select", { opcoes: ["Serviços", "Produtos", "Estoque", "Aluguel", "Contas", "Equipamentos", "Impostos", "Outros"] }) + campoForm("valor", "Valor (R$)", "number", { requerido: true, min: "0.01", step: "0.01", placeholder: "0,00" }) + campoForm("data", "Data", "date", { requerido: true, valor: dataISO() });
-    abrirFormulario("Novo lançamento", "FINANCEIRO", campos, "Salvar lançamento", form => {
-        estado.lancamentos.push({ id: idNovo("lan"), tipo: form.get("tipo"), descricao: form.get("descricao").trim(), categoria: form.get("categoria"), valor: Number(form.get("valor")), data: form.get("data") });
-        salvarEstado();
-        renderizarVisao();
-        mostrarAviso("Lançamento financeiro salvo.");
-    });
-}
-
-function abrirProduto() {
-    const campos = campoForm("nome", "Nome do item", "text", { requerido: true, placeholder: "Ex.: Lote de navalhas" }) + campoForm("categoria", "Categoria", "select", { opcoes: ["Utensílios", "Descartáveis", "Higiene", "Produtos", "Proteção", "Equipamentos", "Outros"] }) + campoForm("quantidade", "Quantidade inicial", "number", { requerido: true, min: "0", step: "1", valor: "0" }) + campoForm("unidade", "Unidade", "select", { opcoes: ["un.", "caixas", "pacotes", "litros", "frascos", "pares", "rolos"] }) + campoForm("custoUnitario", "Custo por unidade (R$)", "number", { requerido: true, min: "0", step: "0.01", valor: "0" }) + campoForm("minimo", "Avisar quando chegar a", "number", { min: "0", step: "1", valor: "2" });
-    abrirFormulario("Adicionar item ao estoque", "ESTOQUE · COMPRAS", campos, "Salvar item", form => {
-        const quantidade = Number(form.get("quantidade"));
-        const custoUnitario = Number(form.get("custoUnitario"));
-        const produto = { id: idNovo("est"), nome: form.get("nome").trim(), categoria: form.get("categoria"), quantidade, unidade: form.get("unidade"), custoUnitario, minimo: Number(form.get("minimo") || 0) };
-        estado.estoque.push(produto);
-        if (quantidade > 0 && custoUnitario > 0) {
-            estado.lancamentos.push({ id: idNovo("lan"), tipo: "saida", descricao: `Compra de estoque: ${produto.nome}`, categoria: "Estoque", valor: quantidade * custoUnitario, data: dataISO(), estoqueId: produto.id });
+function openDialog(title, eyebrow, fields, buttonText, onSubmit) {
+    dialog.innerHTML = `<form class="dialog-content" id="dialog-form"><div class="dialog-heading"><div><span class="eyebrow">${safe(eyebrow)}</span><h2>${safe(title)}</h2></div><button class="dialog-close" type="button" data-action="close-dialog" aria-label="Fechar">×</button></div>${fields}<button class="button button-primary" type="submit">${safe(buttonText)}</button></form>`;
+    dialog.showModal();
+    dialog.querySelector("#dialog-form").addEventListener("submit", async event => {
+        event.preventDefault();
+        const submit = event.submitter;
+        submit.disabled = true;
+        try {
+            await onSubmit(new FormData(event.currentTarget));
+            dialog.close();
+        } catch (error) {
+            showNotice(error.message || "Não foi possível salvar. Tente novamente.", true);
+        } finally {
+            submit.disabled = false;
         }
-        salvarEstado();
-        renderizarVisao();
-        mostrarAviso(quantidade > 0 && custoUnitario > 0 ? "Item cadastrado e compra lançada no financeiro." : "Item cadastrado no estoque.");
     });
 }
 
-function abrirMovimentacaoEstoque(id, tipo) {
-    const produto = estado.estoque.find(item => item.id === id);
-    if (!produto) return;
-    const entrada = tipo === "entrada";
-    const campos = campoForm("quantidade", "Quantidade", "number", { requerido: true, min: "1", step: "1" }) + (entrada ? campoForm("custoUnitario", "Custo por unidade (R$)", "number", { requerido: true, min: "0", step: "0.01", valor: String(produto.custoUnitario || 0) }) : "");
-    abrirFormulario(entrada ? `Registrar compra: ${produto.nome}` : `Registrar uso: ${produto.nome}`, entrada ? "ENTRADA NO ESTOQUE" : "CONSUMO DE MATERIAL", campos, entrada ? "Registrar compra" : "Registrar uso", form => {
-        const quantidade = Number(form.get("quantidade"));
-        if (!entrada && quantidade > Number(produto.quantidade)) {
-            mostrarAviso("A quantidade usada não pode ser maior que o estoque disponível.");
-            return false;
-        }
-        produto.quantidade += entrada ? quantidade : -quantidade;
-        if (entrada) {
-            const custo = Number(form.get("custoUnitario"));
-            produto.custoUnitario = custo;
-            estado.lancamentos.push({ id: idNovo("lan"), tipo: "saida", descricao: `Compra de estoque: ${produto.nome}`, categoria: "Estoque", valor: quantidade * custo, data: dataISO(), estoqueId: produto.id });
-        }
-        salvarEstado();
-        renderizarVisao();
-        mostrarAviso(entrada ? "Estoque atualizado e despesa registrada." : "Consumo de material registrado.");
-    });
-}
-
-function abrirPublicacao() {
-    const campos = campoForm("servico", "Nome do serviço", "text", { requerido: true, placeholder: "Ex.: Corte degradê" }) + campoForm("descricao", "Descrição", "textarea", { placeholder: "Descreva o serviço e o que está incluído" }) + campoForm("preco", "Preço (R$)", "number", { requerido: true, min: "0", step: "0.01", placeholder: "0,00" }) + campoForm("imagem", "Imagem do serviço (URL)", "url", { placeholder: "https://... (opcional)" });
-    abrirFormulario("Nova publicação", "CONTEÚDO · SERVIÇOS", campos, "Publicar serviço", form => {
-        estado.publicacoes.unshift({ id: idNovo("pub"), servico: form.get("servico").trim(), descricao: form.get("descricao").trim(), preco: Number(form.get("preco")), imagem: form.get("imagem").trim(), status: "PUBLICADO", criadoEm: dataISO() });
-        salvarEstado();
-        renderizarVisao();
-        mostrarAviso("Serviço publicado no seu catálogo.");
-    });
-}
-
-function abrirPerfil() {
-    const campos = campoForm("nome", "Seu nome", "text", { requerido: true, valor: estado.perfil.nome, placeholder: "Nome do barbeiro" }) + campoForm("negocio", "Nome da barbearia", "text", { valor: estado.perfil.negocio, placeholder: "Minha barbearia" }) + campoForm("email", "E-mail de contato", "email", { valor: estado.perfil.email, placeholder: "voce@email.com" });
-    abrirFormulario("Editar perfil", "SUA CONTA", campos, "Salvar perfil", form => {
-        estado.perfil.nome = form.get("nome").trim();
-        estado.perfil.negocio = form.get("negocio").trim();
-        estado.perfil.email = form.get("email").trim();
-        salvarEstado();
-        renderizarVisao();
-        mostrarAviso("Perfil atualizado.");
-    });
-}
-
-function mostrarAviso(mensagem) {
-    const aviso = document.querySelector("#aviso-flutuante");
-    aviso.textContent = mensagem;
-    aviso.classList.add("visivel");
-    window.setTimeout(() => aviso.classList.remove("visivel"), 2800);
-}
-
-function executarAcao(acao, id, tipo) {
-    if (acao === "adicionar-cliente") abrirCadastroCliente();
-    if (acao === "editar-perfil") abrirPerfil();
-    if (acao === "novo-lancamento") abrirLancamento();
-    if (acao === "novo-produto") abrirProduto();
-    if (acao === "nova-publicacao") abrirPublicacao();
-    if (acao === "movimentar-estoque") abrirMovimentacaoEstoque(id, tipo);
-    if (acao === "novo-agendamento") mostrarAviso("O cadastro de agenda será habilitado em breve.");
-    if (acao === "remover-cliente") {
-        estado.clientes = estado.clientes.filter(item => item.id !== id);
-        salvarEstado(); renderizarVisao(); mostrarAviso("Cliente removido.");
+function field(name, label, type = "text", options = {}) {
+    const id = `field-${name}`;
+    const required = options.required ? "required" : "";
+    const value = options.value === undefined ? "" : `value="${safe(options.value)}"`;
+    const placeholder = options.placeholder ? `placeholder="${safe(options.placeholder)}"` : "";
+    const min = options.min === undefined ? "" : `min="${safe(options.min)}"`;
+    const max = options.max === undefined ? "" : `max="${safe(options.max)}"`;
+    const maxLength = type === "text" && options.max !== undefined ? `maxlength="${safe(options.max)}"` : "";
+    const step = options.step === undefined ? "" : `step="${safe(options.step)}"`;
+    if (type === "textarea") {
+        return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><textarea id="${id}" name="${safe(name)}" maxlength="${safe(options.maxLength || 2000)}" ${placeholder} ${required}>${safe(options.value || "")}</textarea></div>`;
     }
-    if (acao === "remover-lancamento") {
-        estado.lancamentos = estado.lancamentos.filter(item => item.id !== id);
-        salvarEstado(); renderizarVisao(); mostrarAviso("Lançamento removido.");
-    }
-    if (acao === "remover-publicacao") {
-        estado.publicacoes = estado.publicacoes.filter(item => item.id !== id);
-        salvarEstado(); renderizarVisao(); mostrarAviso("Publicação removida.");
+    return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><input id="${id}" name="${safe(name)}" type="${safe(type)}" ${value} ${placeholder} ${min} ${max} ${maxLength} ${step} ${required}></div>`;
+}
+
+function render() {
+    navigation();
+    if (view === "feed") renderFeed();
+    else if (view === "posts") renderPosts();
+    else if (view === "services") renderServices();
+    else if (view === "bookings") renderBookings();
+    else renderProfile();
+}
+
+async function loadView(nextView) {
+    view = nextView;
+    main.innerHTML = '<p class="loading-state">Carregando...</p>';
+    try {
+        if (view === "feed") await loadFeed();
+        if (view === "posts") await loadPosts();
+        if (view === "services") await loadServices(true);
+        if (view === "bookings") await loadBookings();
+        render();
+        main.focus({ preventScroll: true });
+    } catch (error) {
+        renderError(error);
     }
 }
 
-document.addEventListener("click", evento => {
-    const seletorNegocio = evento.target.closest(".seletor-negocio");
-    if (seletorNegocio) {
-        const menu = document.querySelector("#menu-negocio");
-        menu.hidden = !menu.hidden;
-        seletorNegocio.setAttribute("aria-expanded", String(!menu.hidden));
-        document.querySelector("#menu-perfil").hidden = true;
-        document.querySelector(".botao-perfil").setAttribute("aria-expanded", "false");
+async function loadFeed() {
+    const [{ data: feed, error: feedError }, { data: serviceRows, error: serviceError }] = await Promise.all([
+        supabase.rpc("get_public_posts"),
+        supabase.from("services").select("id, barber_id, name, description, price, duration_minutes, active").eq("active", true).order("name")
+    ]);
+    if (feedError) throw feedError;
+    if (serviceError) throw serviceError;
+    posts = feed || [];
+    services = serviceRows || [];
+    const barberIds = [...new Set(services.map(item => item.barber_id))];
+    if (barberIds.length) {
+        const { data, error } = await supabase.from("profiles").select("id, full_name, shop_name").in("id", barberIds);
+        if (error) throw error;
+        const barbers = new Map((data || []).map(item => [item.id, item]));
+        services = services.map(item => ({ ...item, barber: barbers.get(item.barber_id) }));
+    }
+}
+
+async function loadPosts() {
+    const { data, error } = await supabase.rpc("get_public_posts");
+    if (error) throw error;
+    posts = (data || []).filter(item => item.barber_id === user.id);
+}
+
+async function loadServices(ownOnly) {
+    let query = supabase.from("services")
+        .select("id, barber_id, name, description, price, duration_minutes, active, created_at")
+        .order("created_at", { ascending: false });
+    if (ownOnly) query = query.eq("barber_id", user.id);
+    const { data, error } = await query;
+    if (error) throw error;
+    services = data || [];
+}
+
+async function loadBookings() {
+    const { data, error } = await supabase.rpc("get_my_bookings");
+    if (error) throw error;
+    bookings = data || [];
+}
+
+function renderFeed() {
+    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card"><span class="eyebrow">${safe(service.barber?.shop_name || service.barber?.full_name || "Barbearia")}</span><h3>${safe(service.name)}</h3><p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Agendar</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Volte em breve para conhecer as barbearias.</p>';
+    const postCards = posts.length ? posts.map(post => {
+        const image = usableImage(post.image_url);
+        const comments = commentsByPost[post.id];
+        return `<article class="card feed-card"><div class="card-header"><div><span class="eyebrow">${safe(post.shop_name || "Barbearia")}</span><h3>${safe(post.barber_name)}</h3></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
+    }).join("") : '<p class="empty-state">Os barbeiros ainda não publicaram novidades.</p>';
+    main.innerHTML = `${pageHeading("COMUNIDADE", "Feed dos barbeiros", "Acompanhe as novidades, curta, comente e agende seu próximo atendimento.")}<section><div class="card-header"><div><span class="eyebrow">NOVIDADES</span><h2>Postagens</h2></div></div>${postCards}</section><section>${serviceCards}</section>`;
+}
+
+function renderPosts() {
+    const action = '<button class="button button-primary" type="button" data-action="new-post">Nova postagem</button>';
+    const cards = posts.length ? posts.map(post => {
+        const image = usableImage(post.image_url);
+        return `<article class="card"><div class="card-header"><div><span class="eyebrow">${safe(post.shop_name || profile.shop_name)}</span><time class="muted">${dateTime(post.created_at)}</time></div><button class="button button-danger" type="button" data-action="delete-post" data-id="${safe(post.id)}">Excluir</button></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem da postagem" loading="lazy">` : ""}<p class="muted">♥ ${safe(post.likes_count)} curtidas · ${safe(post.comments_count)} comentários</p></article>`;
+    }).join("") : '<p class="empty-state">Compartilhe seu primeiro trabalho, novidade ou aviso com os clientes.</p>';
+    main.innerHTML = `${pageHeading("CONTEÚDO", "Suas postagens", "Publique novidades para os clientes que acompanham a comunidade.", action)}${cards}`;
+}
+
+function renderServices() {
+    const action = '<button class="button button-primary" type="button" data-action="new-service">Adicionar serviço</button>';
+    const cards = services.length ? services.map(service => `<article class="card service-card"><div><span class="status-pill ${service.active ? "confirmed" : ""}">${service.active ? "Disponível" : "Oculto"}</span><h3>${safe(service.name)}</h3><p class="muted">${safe(service.description || "Sem descrição.")}</p><p class="muted">${safe(service.duration_minutes)} min · <strong class="price">${money(service.price)}</strong></p></div><div class="service-actions"><button class="button" type="button" data-action="toggle-service" data-id="${safe(service.id)}" data-active="${safe(service.active)}">${service.active ? "Ocultar" : "Ativar"}</button><button class="button button-danger" type="button" data-action="delete-service" data-id="${safe(service.id)}">Excluir</button></div></article>`).join("") : '<p class="empty-state">Cadastre serviços para que clientes possam encontrá-los e agendar.</p>';
+    main.innerHTML = `${pageHeading("CATÁLOGO", "Seus serviços", "Gerencie os serviços que aparecem para os clientes.", action)}${cards}`;
+}
+
+function renderBookings() {
+    const ownBookings = bookings.filter(item => isBarber() ? item.barber_id === user.id : item.customer_id === user.id);
+    const cards = ownBookings.length ? ownBookings.map(booking => {
+        const statusClass = booking.status === "confirmed" ? "confirmed" : booking.status === "cancelled" ? "cancelled" : "";
+        const statusLabel = { pending: "Aguardando confirmação", confirmed: "Confirmado", cancelled: "Cancelado", completed: "Concluído" }[booking.status] || booking.status;
+        const canCancel = !isBarber() && ["pending", "confirmed"].includes(booking.status) && new Date(booking.starts_at) > new Date();
+        const controls = isBarber() && booking.status === "pending"
+            ? `<button class="button button-primary" type="button" data-action="booking-status" data-status="confirmed" data-id="${safe(booking.id)}">Confirmar</button><button class="button button-danger" type="button" data-action="booking-status" data-status="cancelled" data-id="${safe(booking.id)}">Recusar</button>`
+            : isBarber() && booking.status === "confirmed"
+                ? `<button class="button" type="button" data-action="booking-status" data-status="completed" data-id="${safe(booking.id)}">Marcar concluído</button><button class="button button-danger" type="button" data-action="booking-status" data-status="cancelled" data-id="${safe(booking.id)}">Cancelar</button>`
+                : canCancel ? `<button class="button button-danger" type="button" data-action="cancel-booking" data-id="${safe(booking.id)}">Cancelar agendamento</button>` : "";
+        return `<article class="card booking-card"><div><span class="status-pill ${statusClass}">${safe(statusLabel)}</span><h3>${safe(booking.service_name)}</h3><p>${isBarber() ? `Cliente: ${safe(booking.customer_name)}` : `Barbeiro: ${safe(booking.barber_name)} · ${safe(booking.shop_name || "")}`}</p><p class="muted">${dateTime(booking.starts_at)} · ${safe(booking.duration_minutes || Math.round((new Date(booking.ends_at) - new Date(booking.starts_at)) / 60000))} min</p><strong class="price">${money(booking.price)}</strong></div><div class="booking-actions">${controls}</div></article>`;
+    }).join("") : '<p class="empty-state">Nenhum agendamento por aqui ainda.</p>';
+    main.innerHTML = `${pageHeading(isBarber() ? "ROTINA" : "SUA AGENDA", isBarber() ? "Agenda da barbearia" : "Meus agendamentos", isBarber() ? "Confirme e acompanhe os pedidos de horário dos clientes." : "Consulte o status dos seus próximos atendimentos.")}${cards}`;
+}
+
+function renderProfile() {
+    const role = isBarber() ? "BARBEIRO" : "CLIENTE";
+    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
+}
+
+function bookingDialog(serviceList, barberId, barberName = "") {
+    const options = serviceList.filter(item => item.barber_id === barberId && item.active)
+        .map(item => `<option value="${safe(item.id)}">${safe(item.name)} · ${money(item.price)} · ${safe(item.duration_minutes)} min</option>`).join("");
+    if (!options) {
+        showNotice("Este barbeiro ainda não possui serviços disponíveis para agendamento.", true);
         return;
     }
+    const fields = `<p class="muted">${safe(barberName || "Escolha o serviço e o horário desejado.")}</p><div class="field"><label for="booking-service">Serviço</label><select id="booking-service" name="service_id" required>${options}</select></div>${field("date", "Data", "date", { required: true, min: dateToday() })}${field("time", "Horário", "time", { required: true })}`;
+    openDialog("Novo agendamento", "ESCOLHA UM HORÁRIO", fields, "Solicitar agendamento", async form => {
+        const service = serviceList.find(item => item.id === form.get("service_id"));
+        const startsAt = new Date(`${form.get("date")}T${form.get("time")}`);
+        if (!service || !Number.isFinite(startsAt.getTime()) || startsAt <= new Date()) {
+            throw new Error("Escolha um serviço e um horário futuro válido.");
+        }
+        const endsAt = new Date(startsAt.getTime() + service.duration_minutes * 60000);
+        const { error } = await supabase.from("bookings").insert({
+            customer_id: user.id,
+            barber_id: service.barber_id,
+            service_id: service.id,
+            starts_at: startsAt.toISOString(),
+            ends_at: endsAt.toISOString(),
+            status: "pending"
+        });
+        if (error) throw error;
+        showNotice("Pedido enviado. O barbeiro precisa confirmar o horário.");
+        await loadView("bookings");
+    });
+}
 
-    const link = evento.target.closest("[data-visao]");
-    if (link) {
-        evento.preventDefault();
-        visaoAtual = link.dataset.visao;
-        termoBusca = "";
-        buscaPainel.value = "";
-        renderizarVisao();
-        conteudoPrincipal.focus({ preventScroll: true });
+document.addEventListener("click", async event => {
+    const viewButton = event.target.closest("[data-view]");
+    if (viewButton) {
+        await loadView(viewButton.dataset.view);
+        return;
     }
-    const botaoAcao = evento.target.closest("[data-acao]");
-    if (botaoAcao) executarAcao(botaoAcao.dataset.acao, botaoAcao.dataset.id, botaoAcao.dataset.tipo);
-    if (evento.target.closest("[data-fechar-dialogo]")) dialogo.close();
-
-    if (evento.target.closest(".menu-negocio") && (link || botaoAcao)) {
-        document.querySelector("#menu-negocio").hidden = true;
-        document.querySelector(".seletor-negocio").setAttribute("aria-expanded", "false");
-    }
-
-    const perfil = evento.target.closest(".botao-perfil");
-    if (perfil) {
-        const painel = document.querySelector("#menu-perfil");
-        painel.hidden = !painel.hidden;
-        perfil.setAttribute("aria-expanded", String(!painel.hidden));
-        document.querySelector("#menu-negocio").hidden = true;
-        document.querySelector(".seletor-negocio").setAttribute("aria-expanded", "false");
-    } else if (!evento.target.closest(".painel-flutuante, .menu-negocio")) {
-        document.querySelectorAll(".painel-flutuante").forEach(item => item.hidden = true);
-        document.querySelector(".botao-perfil").setAttribute("aria-expanded", "false");
-        document.querySelector("#menu-negocio").hidden = true;
-        document.querySelector(".seletor-negocio").setAttribute("aria-expanded", "false");
+    const actionButton = event.target.closest("[data-action]");
+    if (!actionButton) return;
+    const { action, id } = actionButton.dataset;
+    try {
+        if (action === "close-dialog") dialog.close();
+        else if (action === "reload") await loadView(view);
+        else if (action === "new-post") {
+            const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_url", "Link de imagem (opcional)", "url", { placeholder: "https://...", max: 2048, full: true })}`;
+            openDialog("Nova postagem", "COMPARTILHE COM SEUS CLIENTES", fields, "Publicar", async form => {
+                const imageUrl = String(form.get("image_url") || "").trim();
+                if (imageUrl && !usableImage(imageUrl)) throw new Error("Use um link de imagem HTTP ou HTTPS.");
+                const { error } = await supabase.from("posts").insert({
+                    barber_id: user.id, body: String(form.get("body")).trim(), image_url: imageUrl || null
+                });
+                if (error) throw error;
+                showNotice("Postagem publicada.");
+                await loadView("posts");
+            });
+        } else if (action === "delete-post") {
+            const { error } = await supabase.from("posts").delete().eq("id", id).eq("barber_id", user.id);
+            if (error) throw error;
+            showNotice("Postagem excluída.");
+            await loadView("posts");
+        } else if (action === "new-service") {
+            const fields = `<div class="form-grid">${field("name", "Nome do serviço", "text", { required: true, max: 100 })}${field("price", "Preço (R$)", "number", { required: true, min: "0", step: "0.01" })}${field("duration_minutes", "Duração (minutos)", "number", { required: true, min: "10", max: "480", step: "5", value: "30" })}${field("description", "Descrição", "textarea", { maxLength: 500, full: true })}</div>`;
+            openDialog("Adicionar serviço", "SEU CATÁLOGO", fields, "Salvar serviço", async form => {
+                const { error } = await supabase.from("services").insert({
+                    barber_id: user.id,
+                    name: String(form.get("name")).trim(),
+                    description: String(form.get("description") || "").trim(),
+                    price: Number(form.get("price")),
+                    duration_minutes: Number(form.get("duration_minutes"))
+                });
+                if (error) throw error;
+                showNotice("Serviço cadastrado.");
+                await loadView("services");
+            });
+        } else if (action === "toggle-service") {
+            const active = actionButton.dataset.active !== "true";
+            const { error } = await supabase.from("services").update({ active }).eq("id", id).eq("barber_id", user.id);
+            if (error) throw error;
+            await loadView("services");
+        } else if (action === "delete-service") {
+            const { error } = await supabase.from("services").delete().eq("id", id).eq("barber_id", user.id);
+            if (error) throw error;
+            showNotice("Serviço excluído.");
+            await loadView("services");
+        } else if (action === "like") {
+            const post = posts.find(item => item.id === id);
+            if (!post) return;
+            const request = post.has_liked
+                ? supabase.from("post_likes").delete().eq("post_id", id).eq("profile_id", user.id)
+                : supabase.from("post_likes").insert({ post_id: id, profile_id: user.id });
+            const { error } = await request;
+            if (error) throw error;
+            await loadView("feed");
+        } else if (action === "comments") {
+            const { data, error } = await supabase.rpc("get_post_comments", { p_post_id: id });
+            if (error) throw error;
+            commentsByPost[id] = data || [];
+            renderFeed();
+        } else if (action === "book") {
+            const service = services.find(item => item.id === id);
+            if (service) bookingDialog(services, service.barber_id, service.barber?.shop_name || service.barber?.full_name);
+        } else if (action === "book-barber") {
+            bookingDialog(services, id, posts.find(item => item.barber_id === id)?.barber_name);
+        } else if (action === "cancel-booking") {
+            const { error } = await supabase.rpc("cancel_booking", { p_booking_id: id });
+            if (error) throw error;
+            showNotice("Agendamento cancelado.");
+            await loadView("bookings");
+        } else if (action === "booking-status") {
+            const { error } = await supabase.from("bookings").update({ status: actionButton.dataset.status }).eq("id", id);
+            if (error) throw error;
+            showNotice("Status do agendamento atualizado.");
+            await loadView("bookings");
+        }
+    } catch (error) {
+        showNotice(error.message || "Não foi possível concluir a ação.", true);
     }
 });
 
-document.addEventListener("submit", evento => {
-    if (evento.target.id !== "formulario-dinamico" || !acaoFormulario) return;
-    evento.preventDefault();
-    const resultado = acaoFormulario(new FormData(evento.target));
-    if (resultado === false) return;
-    acaoFormulario = null;
-    dialogo.close();
-});
-
-document.querySelector("#dialogo-principal").addEventListener("click", evento => {
-    if (evento.target === dialogo) dialogo.close();
-});
-document.querySelector("#dialogo-principal").addEventListener("close", () => acaoFormulario = null);
-
-buscaPainel.addEventListener("input", () => {
-    termoBusca = buscaPainel.value.trim();
-    renderizarVisao();
-});
-
-document.addEventListener("keydown", evento => {
-    if ((evento.metaKey || evento.ctrlKey) && evento.key.toLowerCase() === "k") {
-        evento.preventDefault();
-        buscaPainel.focus();
+document.addEventListener("submit", async event => {
+    const form = event.target;
+    if (form.matches('[data-form="comment"]')) {
+        event.preventDefault();
+        const postId = form.dataset.id;
+        const body = String(new FormData(form).get("body") || "").trim();
+        if (!body) return;
+        try {
+            const { error } = await supabase.from("post_comments").insert({
+                post_id: postId, author_id: user.id, body
+            });
+            if (error) throw error;
+            const { data, error: commentsError } = await supabase.rpc("get_post_comments", { p_post_id: postId });
+            if (commentsError) throw commentsError;
+            commentsByPost[postId] = data || [];
+            showNotice("Comentário enviado.");
+            await loadView("feed");
+            commentsByPost[postId] = data || [];
+            renderFeed();
+        } catch (error) {
+            showNotice(error.message || "Não foi possível enviar o comentário.", true);
+        }
+        return;
     }
-    if (evento.key === "Escape") {
-        document.querySelectorAll(".painel-flutuante").forEach(item => item.hidden = true);
-        document.querySelector(".botao-perfil").setAttribute("aria-expanded", "false");
-        document.querySelector("#menu-negocio").hidden = true;
-        document.querySelector(".seletor-negocio").setAttribute("aria-expanded", "false");
+    if (form.id === "profile-form") {
+        event.preventDefault();
+        const values = new FormData(form);
+        const updates = { full_name: String(values.get("full_name")).trim() };
+        if (isBarber()) {
+            updates.shop_name = String(values.get("shop_name")).trim();
+            updates.bio = String(values.get("bio") || "").trim();
+        }
+        try {
+            const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
+            if (error) throw error;
+            profile = { ...profile, ...updates };
+            document.querySelector("#user-name").textContent = profile.full_name;
+            showNotice("Perfil atualizado.");
+            render();
+        } catch (error) {
+            showNotice(error.message || "Não foi possível atualizar o perfil.", true);
+        }
     }
 });
 
-atualizarIdentidade();
-renderizarVisao();
+document.querySelector("#sign-out").addEventListener("click", async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) showNotice(error.message, true);
+    else window.location.assign("index.html");
+});
+
+dialog.addEventListener("click", event => {
+    if (event.target === dialog) dialog.close();
+});
+
+async function start() {
+    try {
+        supabase = exigirSupabase();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session) {
+            window.location.replace("index.html");
+            return;
+        }
+        user = session.user;
+        const { data, error } = await supabase.from("profiles")
+            .select("id, role, full_name, shop_name, bio").eq("id", user.id).single();
+        if (error) throw error;
+        profile = data;
+        document.querySelector("#user-name").textContent = profile.full_name;
+        view = isBarber() ? "posts" : "feed";
+        await loadView(view);
+    } catch (error) {
+        renderError(error);
+    }
+}
+
+start();

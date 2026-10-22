@@ -1,0 +1,84 @@
+:root {
+    font-family: "Barlow", "Segoe UI", sans-serif;
+    color: #191919;
+    background: #f8f7f2;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+
+.app-shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+.app-header { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e5e1d7; }
+.app-brand { display: inline-flex; align-items: center; gap: 10px; color: #191919; text-decoration: none; font-family: "Barlow Condensed", sans-serif; font-size: 21px; font-weight: 700; letter-spacing: 1.5px; }
+.app-brand span { color: #a4773f; font-size: 25px; }
+.app-user { display: flex; align-items: center; gap: 14px; color: #625e55; font-size: 14px; }
+.app-nav { display: flex; gap: 8px; padding: 16px 0; border-bottom: 1px solid #e5e1d7; overflow-x: auto; }
+.nav-button { border: 0; border-radius: 6px; padding: 10px 15px; color: #625e55; background: transparent; white-space: nowrap; }
+.nav-button:hover, .nav-button.active { color: #191919; background: #ebe7dc; }
+.app-main { padding: 28px 0 60px; }
+.page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 22px; }
+.eyebrow { display: block; margin-bottom: 7px; color: #a4773f; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: 5px; font-family: "Barlow Condensed", sans-serif; font-size: clamp(28px, 5vw, 38px); }
+h2 { margin-bottom: 6px; font-family: "Barlow Condensed", sans-serif; font-size: 25px; }
+h3 { margin-bottom: 5px; font-size: 17px; }
+.muted, .page-heading p { color: #77736b; }
+.page-heading p { margin-bottom: 0; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 9px 15px; border: 1px solid #d8d2c5; border-radius: 6px; color: #292720; background: #fffefa; text-decoration: none; font-weight: 600; }
+.button:hover { border-color: #b9a477; }
+.button-primary { border-color: #20201d; color: #fff; background: #20201d; }
+.button-primary:hover { border-color: #433c2f; background: #433c2f; }
+.button-quiet { min-height: 36px; padding: 7px 12px; }
+.button-danger { color: #9c3e32; }
+.button:disabled { cursor: wait; opacity: .6; }
+.card { margin: 0 0 16px; padding: 20px; border: 1px solid #e5e1d7; border-radius: 9px; background: #fffefa; box-shadow: 0 5px 18px #19191908; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 14px; }
+.feed-card { overflow: hidden; }
+.feed-image { display: block; width: 100%; max-height: 440px; margin: 15px 0; border-radius: 7px; object-fit: cover; }
+.feed-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid #eeeae1; }
+.feed-copy { line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.price { color: #8a632e; font-size: 18px; font-weight: 700; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field-full { grid-column: 1 / -1; }
+.field label { color: #39372f; font-size: 13px; font-weight: 600; }
+.field input, .field textarea, .field select { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #dedbd2; border-radius: 5px; color: #191919; background: #fffefa; }
+.field textarea { min-height: 100px; resize: vertical; }
+.field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid #c59d4a55; border-color: #c59d4a; }
+.service-card, .booking-card, .comment-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.service-actions, .booking-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.status-pill { display: inline-block; padding: 5px 9px; border-radius: 999px; color: #68572d; background: #f5edcf; font-size: 12px; font-weight: 600; }
+.status-pill.confirmed { color: #276348; background: #e1f1e8; }
+.status-pill.cancelled { color: #8f443b; background: #f7e6e2; }
+.comments { margin-top: 14px; padding-top: 12px; border-top: 1px solid #eeeae1; }
+.comment-item { justify-content: flex-start; margin: 10px 0; }
+.comment-item strong { min-width: max-content; }
+.inline-form { display: flex; gap: 8px; margin-top: 12px; }
+.inline-form input { flex: 1; min-width: 0; padding: 9px; border: 1px solid #dedbd2; border-radius: 5px; }
+.empty-state, .loading-state, .error-state { padding: 24px; border-radius: 8px; color: #77736b; background: #efede6; text-align: center; }
+.error-state { color: #9c3e32; background: #f7e6e2; }
+.app-dialog { width: min(520px, calc(100% - 24px)); max-height: min(90vh, 800px); padding: 0; border: 1px solid #e5e1d7; border-radius: 10px; background: #fffefa; box-shadow: 0 20px 70px #0003; }
+.app-dialog::backdrop { background: #16151088; }
+.dialog-content { padding: 23px; }
+.dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+.dialog-close { border: 0; color: #77736b; background: transparent; font-size: 25px; }
+.app-notice { position: fixed; right: 20px; bottom: 20px; z-index: 3; max-width: min(440px, calc(100% - 40px)); padding: 12px 16px; border-radius: 7px; color: #fff; background: #20201d; box-shadow: 0 6px 22px #0003; opacity: 0; pointer-events: none; transform: translateY(8px); transition: .2s ease; }
+.app-notice.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 600px) {
+    .app-shell { width: min(100% - 22px, 1120px); }
+    .app-header { min-height: 65px; }
+    .app-user { gap: 8px; font-size: 12px; }
+    .app-nav { padding: 10px 0; }
+    .app-main { padding-top: 21px; }
+    .page-heading, .service-card, .booking-card { align-items: stretch; flex-direction: column; }
+    .form-grid { grid-template-columns: 1fr; gap: 0; }
+    .field-full { grid-column: auto; }
+    .card { padding: 16px; }
+}

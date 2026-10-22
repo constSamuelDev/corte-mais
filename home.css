@@ -18,6 +18,9 @@
 .painel-aplicativo button,
 .painel-aplicativo input { font: inherit; }
 .painel-aplicativo button { color: inherit; }
+.painel-aplicativo button.button { color: #292720; }
+.painel-aplicativo button.button-primary { color: #fff; }
+.painel-aplicativo button.button-danger { color: #9c3e32; }
 .estrutura-painel { min-height: 100vh; }
 
 .barra-lateral {

@@ -22,6 +22,33 @@ function showStatus(message, isError = false) {
     status.classList.toggle("status-erro", isError);
 }
 
+function formatAuthError(error) {
+    const rawMessage = error && (error.message || error.error_description || error.details || error.code || "");
+    const normalized = String(rawMessage).toLowerCase();
+
+    if (normalized.includes("rate limit exceeded") || normalized.includes("too many requests") || normalized.includes("email rate limit")) {
+        return "Muitas tentativas foram feitas para este e-mail. Aguarde alguns minutos e tente novamente.";
+    }
+
+    if (normalized.includes("invalid login credentials") || normalized.includes("user not found") || normalized.includes("invalid_credentials")) {
+        return "E-mail ou senha inválidos.";
+    }
+
+    if (normalized.includes("email not confirmed") || normalized.includes("not confirmed")) {
+        return "Confirme seu e-mail antes de continuar.";
+    }
+
+    if (normalized.includes("invalid email") || normalized.includes("email is invalid") || normalized.includes("not an email")) {
+        return "Informe um e-mail válido.";
+    }
+
+    if (normalized.includes("already registered") || normalized.includes("user already registered") || normalized.includes("already exists")) {
+        return "Este e-mail já está cadastrado. Tente entrar ou recuperar sua senha.";
+    }
+
+    return rawMessage || "Não foi possível concluir o acesso. Tente novamente.";
+}
+
 function setMode(nextMode) {
     mode = nextMode;
     const signup = mode === "signup";
@@ -119,7 +146,7 @@ form.addEventListener("submit", async event => {
         }
         window.location.assign("home.html");
     } catch (error) {
-        showStatus(error.message || "Não foi possível concluir o acesso. Tente novamente.", true);
+        showStatus(formatAuthError(error), true);
     } finally {
         submitButton.disabled = false;
     }
@@ -140,7 +167,7 @@ document.querySelector("#recuperar-senha").addEventListener("click", async () =>
         if (error) throw error;
         showStatus("Se houver uma conta com esse e-mail, enviaremos as instruções de recuperação.");
     } catch (error) {
-        showStatus(error.message || "Não foi possível enviar o e-mail de recuperação.", true);
+        showStatus(formatAuthError(error) || "Não foi possível enviar o e-mail de recuperação.", true);
     }
 });
 
@@ -163,7 +190,7 @@ resendConfirmationButton.addEventListener("click", async () => {
         showStatus("Se a conta ainda precisar de confirmação, enviaremos um novo link para esse e-mail.");
         resendConfirmationButton.hidden = true;
     } catch (error) {
-        showStatus(error.message || "Não foi possível reenviar a confirmação.", true);
+        showStatus(formatAuthError(error) || "Não foi possível reenviar a confirmação.", true);
     } finally {
         resendConfirmationButton.disabled = false;
     }
@@ -189,8 +216,8 @@ if (authError.get("error_code") === "otp_expired" || authError.get("error") === 
         exigirSupabase().auth.getSession().then(({ data, error }) => {
             if (error) throw error;
             if (data.session) window.location.replace("home.html");
-        }).catch(error => showStatus(error.message, true));
+        }).catch(error => showStatus(formatAuthError(error), true));
     } catch (error) {
-        showStatus(error.message, true);
+        showStatus(formatAuthError(error), true);
     }
 }

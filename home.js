@@ -11,6 +11,8 @@ let view = "";
 let posts = [];
 let services = [];
 let bookings = [];
+let financialEntries = [];
+let inventoryItems = [];
 let commentsByPost = {};
 
 const isBarber = () => profile.role === "barber";
@@ -25,6 +27,10 @@ const dateToday = () => {
     const now = new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
+const initials = value => String(value || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toLocaleUpperCase("pt-BR") || "CM";
+const formatDate = value => new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit", month: "short", year: "numeric"
+}).format(new Date(`${value}T12:00:00`));
 const usableImage = value => {
     if (!value) return "";
     try {
@@ -37,10 +43,10 @@ const usableImage = value => {
 
 function showNotice(message, isError = false) {
     notice.textContent = message;
-    notice.classList.add("visible");
+    notice.classList.add("visivel");
     notice.style.background = isError ? "#9c3e32" : "";
     window.clearTimeout(showNotice.timer);
-    showNotice.timer = window.setTimeout(() => notice.classList.remove("visible"), 3500);
+    showNotice.timer = window.setTimeout(() => notice.classList.remove("visivel"), 3500);
 }
 
 function renderError(error) {
@@ -49,16 +55,21 @@ function renderError(error) {
 }
 
 function navigation() {
-    const pages = isBarber()
-        ? [["posts", "Conteúdo"], ["services", "Serviços"], ["bookings", "Agenda"], ["profile", "Meu perfil"]]
-        : [["feed", "Feed"], ["bookings", "Meus agendamentos"], ["profile", "Meu perfil"]];
-    nav.innerHTML = pages.map(([id, label]) =>
-        `<button class="nav-button ${view === id ? "active" : ""}" data-view="${id}" type="button" ${view === id ? 'aria-current="page"' : ""}>${label}</button>`
+    const groups = isBarber()
+        ? [
+            ["WORKSPACE", [["overview", "Visão geral", "◈"], ["bookings", "Agenda", "▦"], ["clients", "Clientes", "◎"], ["profile", "Meu perfil", "✦"]]],
+            ["GESTÃO", [["finance", "Financeiro", "↗"], ["inventory", "Estoque", "▤"], ["services", "Serviços", "▤"], ["posts", "Conteúdo", "▢"]]]
+        ]
+        : [["COMUNIDADE", [["feed", "Feed", "◈"], ["bookings", "Meus agendamentos", "▦"], ["profile", "Meu perfil", "✦"]]]];
+    nav.innerHTML = groups.map(([group, pages]) =>
+        `<div class="grupo-navegacao"><span class="titulo-navegacao">${group}</span>${pages.map(([id, label, icon]) =>
+            `<button class="link-navegacao ${view === id ? "ativo" : ""}" data-view="${id}" type="button" ${view === id ? 'aria-current="page"' : ""}><span class="icone-nav" aria-hidden="true">${icon}</span><span>${label}</span></button>`
+        ).join("")}</div>`
     ).join("");
 }
 
 function pageHeading(eyebrow, title, description, action = "") {
-    return `<header class="page-heading"><div><span class="eyebrow">${safe(eyebrow)}</span><h1>${safe(title)}</h1><p>${safe(description)}</p></div>${action}</header>`;
+    return `<header class="cabecalho-pagina"><div><span class="sobretitulo">${safe(eyebrow)}</span><h1>${safe(title)}</h1><p>${safe(description)}</p></div>${action}</header>`;
 }
 
 function openDialog(title, eyebrow, fields, buttonText, onSubmit) {
@@ -91,15 +102,26 @@ function field(name, label, type = "text", options = {}) {
     if (type === "textarea") {
         return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><textarea id="${id}" name="${safe(name)}" maxlength="${safe(options.maxLength || 2000)}" ${placeholder} ${required}>${safe(options.value || "")}</textarea></div>`;
     }
+    if (type === "select") {
+        const choices = (options.options || []).map(option => {
+            const selected = option.value === options.value ? "selected" : "";
+            return `<option value="${safe(option.value)}" ${selected}>${safe(option.label)}</option>`;
+        }).join("");
+        return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><select id="${id}" name="${safe(name)}" ${required}>${choices}</select></div>`;
+    }
     return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><input id="${id}" name="${safe(name)}" type="${safe(type)}" ${value} ${placeholder} ${min} ${max} ${maxLength} ${step} ${required}></div>`;
 }
 
 function render() {
     navigation();
-    if (view === "feed") renderFeed();
+    if (view === "overview") renderOverview();
+    else if (view === "feed") renderFeed();
     else if (view === "posts") renderPosts();
     else if (view === "services") renderServices();
     else if (view === "bookings") renderBookings();
+    else if (view === "clients") renderClients();
+    else if (view === "finance") renderFinance();
+    else if (view === "inventory") renderInventory();
     else renderProfile();
 }
 
@@ -107,10 +129,16 @@ async function loadView(nextView) {
     view = nextView;
     main.innerHTML = '<p class="loading-state">Carregando...</p>';
     try {
+        if (view === "overview") {
+            await Promise.all([loadBookings(), loadServices(true), loadFinancialEntries(), loadInventoryItems()]);
+        }
         if (view === "feed") await loadFeed();
         if (view === "posts") await loadPosts();
         if (view === "services") await loadServices(true);
         if (view === "bookings") await loadBookings();
+        if (view === "clients") await loadBookings();
+        if (view === "finance") await loadFinancialEntries();
+        if (view === "inventory") await loadInventoryItems();
         render();
         main.focus({ preventScroll: true });
     } catch (error) {
@@ -156,6 +184,115 @@ async function loadBookings() {
     const { data, error } = await supabase.rpc("get_my_bookings");
     if (error) throw error;
     bookings = data || [];
+}
+
+async function loadFinancialEntries() {
+    const { data, error } = await supabase.from("financial_entries")
+        .select("id, type, description, category, amount, entry_date, created_at")
+        .eq("barber_id", user.id)
+        .order("entry_date", { ascending: false })
+        .order("created_at", { ascending: false });
+    if (error) throw error;
+    financialEntries = data || [];
+}
+
+async function loadInventoryItems() {
+    const { data, error } = await supabase.from("inventory_items")
+        .select("id, name, category, quantity, unit, unit_cost, minimum_quantity, updated_at")
+        .eq("barber_id", user.id)
+        .order("name");
+    if (error) throw error;
+    inventoryItems = data || [];
+}
+
+function monthFinancialTotals() {
+    const monthEntries = financialEntries.filter(item => item.entry_date.startsWith(dateToday().slice(0, 7)));
+    const income = monthEntries.filter(item => item.type === "income").reduce((sum, item) => sum + Number(item.amount), 0);
+    const expense = monthEntries.filter(item => item.type === "expense").reduce((sum, item) => sum + Number(item.amount), 0);
+    return { income, expense, balance: income - expense };
+}
+
+function renderOverview() {
+    const totals = monthFinancialTotals();
+    const today = dateToday();
+    const todayBookings = bookings.filter(item => item.starts_at.slice(0, 10) === today && item.status !== "cancelled");
+    const upcoming = bookings.filter(item => new Date(item.starts_at) >= new Date() && ["pending", "confirmed"].includes(item.status))
+        .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)).slice(0, 4);
+    const clientCount = new Set(bookings.map(item => item.customer_id)).size;
+    const metrics = [
+        ["Agendamentos hoje", todayBookings.length, "Sua agenda de hoje", "tom-amarelo", "▦"],
+        ["Clientes atendidos", clientCount, "Com agendamentos registrados", "tom-verde", "◎"],
+        ["Entradas no mês", money(totals.income), "Receitas registradas", "tom-azul", "↙"],
+        ["Saldo do mês", money(totals.balance), `${money(totals.expense)} em saídas`, "tom-rosa", "↗"]
+    ];
+    const bookingRows = upcoming.length ? upcoming.map(item => {
+        const customerName = isBarber() ? item.customer_name : item.barber_name;
+        const label = item.status === "confirmed" ? "Confirmado" : item.status === "pending" ? "Aguardando" : item.status;
+        const statusClass = item.status === "confirmed" ? "estado-confirmado" : "estado-aguardando";
+        return `<article class="linha-agendamento"><time class="hora-agendamento">${safe(new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.starts_at)))}</time><span class="avatar avatar-agendamento">${safe(initials(customerName))}</span><div class="dados-agendamento"><strong>${safe(customerName)}</strong><span>${safe(item.service_name)} · ${safe(dateTime(item.starts_at))}</span></div><span class="estado-agendamento ${statusClass}">${safe(label)}</span></article>`;
+    }).join("") : '<p class="estado-vazio">Sua agenda está vazia. Os próximos agendamentos aparecerão aqui.</p>';
+    const shortcuts = [
+        ["finance", "↗", "Financeiro", `${money(totals.balance)} de saldo no mês`],
+        ["inventory", "▤", "Estoque", `${inventoryItems.length} itens cadastrados`],
+        ["services", "▤", "Serviços", `${services.length} cadastrados`],
+        ["posts", "▢", "Conteúdo", "Publicações para clientes"]
+    ];
+    main.innerHTML = `${pageHeading("VISÃO GERAL", `Olá, ${profile.full_name.split(/\s+/)[0]}.`, "Acompanhe a rotina e os resultados da sua barbearia.")}
+        <section class="grade-indicadores" aria-label="Resumo do negócio">${metrics.map(([label, value, caption, tone, icon]) => `<article class="cartao-indicador"><div class="topo-indicador"><span>${safe(label)}</span><span class="icone-indicador ${tone}" aria-hidden="true">${icon}</span></div><strong class="valor-indicador">${safe(value)}</strong><span class="variacao-indicador">${safe(caption)}</span></article>`).join("")}</section>
+        <div class="grade-conteudo">
+            <section class="painel-conteudo painel-agenda"><div class="cabecalho-painel"><div><span class="sobretitulo">ROTINA</span><h2>Próximos atendimentos</h2></div><button class="link-discreto" type="button" data-view="bookings">Abrir agenda <span aria-hidden="true">→</span></button></div><div class="lista-agendamentos">${bookingRows}</div></section>
+            <section class="painel-conteudo painel-clientes"><div class="cabecalho-painel"><div><span class="sobretitulo">GESTÃO</span><h2>Atalhos</h2></div></div><div class="acoes-atalho">${shortcuts.map(([target, icon, label, description]) => `<button class="atalho-painel" type="button" data-view="${target}"><span aria-hidden="true">${icon}</span><strong>${label}</strong><small>${safe(description)}</small></button>`).join("")}</div></section>
+        </div>`;
+}
+
+function renderClients() {
+    const clients = new Map();
+    bookings.forEach(booking => {
+        const current = clients.get(booking.customer_id);
+        if (!current || new Date(booking.starts_at) > new Date(current.lastBooking)) {
+            clients.set(booking.customer_id, { name: booking.customer_name, lastBooking: booking.starts_at, total: (current?.total || 0) + 1 });
+        } else {
+            current.total += 1;
+        }
+    });
+    const rows = [...clients.values()].sort((a, b) => new Date(b.lastBooking) - new Date(a.lastBooking));
+    const list = rows.length ? rows.map(item => `<article class="linha-cliente"><span class="avatar avatar-cliente">${safe(initials(item.name))}</span><div class="dados-cliente"><strong>${safe(item.name)}</strong><span>Último agendamento · ${safe(dateTime(item.lastBooking))}</span></div><span class="valor-cliente">${item.total} ${item.total === 1 ? "visita" : "visitas"}</span></article>`).join("") : '<p class="estado-vazio">Clientes com agendamentos aparecerão aqui.</p>';
+    main.innerHTML = `${pageHeading("RELACIONAMENTO", "Clientes", "Acompanhe os clientes que já solicitaram horários na barbearia.")}<section class="painel-conteudo tabela-clientes"><div class="cabecalho-painel"><div><span class="sobretitulo">SUA COMUNIDADE</span><h2>${rows.length} clientes</h2></div></div><div class="lista-clientes lista-clientes-completa">${list}</div></section>`;
+}
+
+function renderFinance() {
+    const totals = monthFinancialTotals();
+    const rows = financialEntries.length ? financialEntries.map(item => `<article class="linha-financeira"><span class="indicador-tipo ${item.type === "income" ? "entrada" : "saida"}" aria-hidden="true">${item.type === "income" ? "↙" : "↗"}</span><div class="dados-lancamento"><strong>${safe(item.description)}</strong><span>${safe(item.category)} · ${safe(formatDate(item.entry_date))}</span></div><strong class="valor-lancamento ${item.type === "income" ? "entrada" : "saida"}">${item.type === "income" ? "+" : "−"} ${money(item.amount)}</strong><button class="botao-remover" type="button" data-action="delete-entry" data-id="${safe(item.id)}" aria-label="Remover lançamento ${safe(item.description)}">×</button></article>`).join("") : '<p class="estado-vazio">Nenhuma movimentação registrada. Adicione entradas e despesas para acompanhar o resultado.</p>';
+    const action = '<button class="botao-primario" type="button" data-action="new-entry"><span aria-hidden="true">+</span> Adicionar lançamento</button>';
+    main.innerHTML = `${pageHeading("GESTÃO", "Financeiro", "Controle as entradas, saídas e o saldo da sua barbearia.", action)}<section class="grade-resumo-financeiro"><article><span>Entradas neste mês</span><strong class="texto-entrada">${money(totals.income)}</strong></article><article><span>Saídas neste mês</span><strong class="texto-saida">${money(totals.expense)}</strong></article><article><span>Saldo deste mês</span><strong>${money(totals.balance)}</strong></article></section><section class="painel-conteudo tabela-financeira"><div class="cabecalho-painel"><div><span class="sobretitulo">MOVIMENTAÇÕES</span><h2>${financialEntries.length} lançamentos</h2></div><span class="legenda-horario">MÊS ATUAL NO RESUMO</span></div><div class="lista-financeira">${rows}</div></section>`;
+}
+
+function renderInventory() {
+    const totalQuantity = inventoryItems.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const lowStockCount = inventoryItems.filter(item => Number(item.quantity) <= Number(item.minimum_quantity)).length;
+    const rows = inventoryItems.length ? inventoryItems.map(item => {
+        const lowStock = Number(item.quantity) <= Number(item.minimum_quantity);
+        return `<article class="linha-estoque">
+            <span class="icone-estoque" aria-hidden="true">▤</span>
+            <div class="dados-produto"><strong>${safe(item.name)}</strong><span>${safe(item.category)}</span></div>
+            <span class="quantidade-produto ${lowStock ? "estoque-baixo" : ""}">${safe(Number(item.quantity).toLocaleString("pt-BR", { maximumFractionDigits: 2 }))} ${safe(item.unit)}</span>
+            <span class="custo-produto">${money(item.unit_cost)} / ${safe(item.unit)}</span>
+            <div class="acoes-produto">
+                <button class="botao-secundario" type="button" data-action="move-inventory" data-direction="entry" data-id="${safe(item.id)}">Entrada</button>
+                <button class="botao-secundario" type="button" data-action="move-inventory" data-direction="use" data-id="${safe(item.id)}">Uso</button>
+                <button class="botao-remover" type="button" data-action="delete-inventory" data-id="${safe(item.id)}" aria-label="Remover ${safe(item.name)}">×</button>
+            </div>
+        </article>`;
+    }).join("") : '<p class="estado-vazio">Seu estoque está vazio. Cadastre itens para acompanhar quantidades, compras e consumo.</p>';
+    const action = '<button class="botao-primario" type="button" data-action="new-inventory"><span aria-hidden="true">+</span> Adicionar item</button>';
+    main.innerHTML = `${pageHeading("GESTÃO", "Estoque", "Acompanhe utensílios, produtos e compras da barbearia.", action)}
+        <section class="grade-resumo-financeiro resumo-estoque">
+            <article><span>Itens cadastrados</span><strong>${inventoryItems.length}</strong></article>
+            <article><span>Unidades em estoque</span><strong>${safe(totalQuantity.toLocaleString("pt-BR", { maximumFractionDigits: 2 }))}</strong></article>
+            <article><span>Itens no mínimo</span><strong>${lowStockCount}</strong></article>
+        </section>
+        <section class="painel-conteudo tabela-financeira"><div class="cabecalho-painel"><div><span class="sobretitulo">MATERIAIS E UTENSÍLIOS</span><h2>Estoque atual</h2></div></div><div class="lista-estoque">${rows}</div></section>
+        <p class="nota-modulo">Compras registradas como entrada no estoque também são lançadas automaticamente como despesa no financeiro.</p>`;
 }
 
 function renderFeed() {
@@ -286,6 +423,85 @@ document.addEventListener("click", async event => {
             if (error) throw error;
             showNotice("Serviço excluído.");
             await loadView("services");
+        } else if (action === "new-entry") {
+            const fields = `<div class="form-grid">${field("type", "Movimentação", "select", { required: true, options: [{ value: "income", label: "Entrada" }, { value: "expense", label: "Saída" }] })}${field("category", "Categoria", "select", { required: true, options: ["Serviços", "Produtos", "Estoque", "Aluguel", "Contas", "Equipamentos", "Impostos", "Outros"].map(value => ({ value, label: value })) })}${field("description", "Descrição", "text", { required: true, max: 120, placeholder: "Ex.: Corte, aluguel, conta de luz" })}${field("amount", "Valor (R$)", "number", { required: true, min: "0.01", step: "0.01", placeholder: "0,00" })}${field("entry_date", "Data", "date", { required: true, value: dateToday() })}</div>`;
+            openDialog("Novo lançamento", "FINANCEIRO", fields, "Salvar lançamento", async form => {
+                const { error } = await supabase.from("financial_entries").insert({
+                    barber_id: user.id,
+                    type: String(form.get("type")),
+                    category: String(form.get("category")),
+                    description: String(form.get("description")).trim(),
+                    amount: Number(form.get("amount")),
+                    entry_date: String(form.get("entry_date"))
+                });
+                if (error) throw error;
+                showNotice("Lançamento financeiro salvo.");
+                await loadView("finance");
+            });
+        } else if (action === "new-inventory") {
+            const fields = `<div class="form-grid">
+                ${field("name", "Nome do item", "text", { required: true, max: 100, placeholder: "Ex.: Pomada modeladora" })}
+                ${field("category", "Categoria", "select", { required: true, options: ["Produtos", "Consumíveis", "Ferramentas", "Proteção", "Equipamentos", "Outros"].map(value => ({ value, label: value })) })}
+                ${field("quantity", "Quantidade inicial", "number", { required: true, min: "0", step: "0.01", value: "0" })}
+                ${field("unit", "Unidade", "select", { required: true, options: ["un.", "caixas", "pacotes", "litros", "frascos", "pares", "rolos"].map(value => ({ value, label: value })) })}
+                ${field("unit_cost", "Custo por unidade (R$)", "number", { required: true, min: "0", step: "0.01", value: "0" })}
+                ${field("minimum_quantity", "Avisar quando chegar a", "number", { required: true, min: "0", step: "0.01", value: "2" })}
+            </div>`;
+            openDialog("Adicionar item ao estoque", "ESTOQUE · COMPRAS", fields, "Salvar item", async form => {
+                const quantity = Number(form.get("quantity"));
+                const unitCost = Number(form.get("unit_cost"));
+                const { error } = await supabase.rpc("create_inventory_item", {
+                    p_name: String(form.get("name")).trim(),
+                    p_category: String(form.get("category")),
+                    p_quantity: quantity,
+                    p_unit: String(form.get("unit")),
+                    p_unit_cost: unitCost,
+                    p_minimum_quantity: Number(form.get("minimum_quantity")),
+                    p_entry_date: dateToday()
+                });
+                if (error) throw error;
+                showNotice(quantity > 0 && unitCost > 0
+                    ? "Item cadastrado e compra lançada no financeiro."
+                    : "Item cadastrado no estoque.");
+                await loadView("inventory");
+            });
+        } else if (action === "move-inventory") {
+            const item = inventoryItems.find(entry => entry.id === id);
+            if (!item) return;
+            const isEntry = actionButton.dataset.direction === "entry";
+            const fields = `${field("quantity", "Quantidade", "number", { required: true, min: "0.01", step: "0.01" })}${isEntry ? field("unit_cost", "Custo por unidade (R$)", "number", { required: true, min: "0", step: "0.01", value: String(item.unit_cost) }) : ""}`;
+            openDialog(
+                isEntry ? `Registrar compra: ${item.name}` : `Registrar uso: ${item.name}`,
+                isEntry ? "ENTRADA NO ESTOQUE" : "CONSUMO DE MATERIAL",
+                fields,
+                isEntry ? "Registrar compra" : "Registrar uso",
+                async form => {
+                    const { error } = await supabase.rpc("move_inventory_item", {
+                        p_item_id: item.id,
+                        p_direction: isEntry ? "entry" : "use",
+                        p_quantity: Number(form.get("quantity")),
+                        p_unit_cost: isEntry ? Number(form.get("unit_cost")) : Number(item.unit_cost),
+                        p_entry_date: dateToday()
+                    });
+                    if (error) throw error;
+                    showNotice(isEntry
+                        ? "Estoque atualizado e despesa registrada."
+                        : "Consumo de material registrado.");
+                    await loadView("inventory");
+                }
+            );
+        } else if (action === "delete-inventory") {
+            const item = inventoryItems.find(entry => entry.id === id);
+            if (!item || !window.confirm(`Remover "${item.name}" do estoque?`)) return;
+            const { error } = await supabase.from("inventory_items").delete().eq("id", id).eq("barber_id", user.id);
+            if (error) throw error;
+            showNotice("Item removido do estoque.");
+            await loadView("inventory");
+        } else if (action === "delete-entry") {
+            const { error } = await supabase.from("financial_entries").delete().eq("id", id).eq("barber_id", user.id);
+            if (error) throw error;
+            showNotice("Lançamento removido.");
+            await loadView("finance");
         } else if (action === "like") {
             const post = posts.find(item => item.id === id);
             if (!post) return;
@@ -366,11 +582,14 @@ document.addEventListener("submit", async event => {
     }
 });
 
-document.querySelector("#sign-out").addEventListener("click", async () => {
+async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) showNotice(error.message, true);
     else window.location.assign("index.html");
-});
+}
+
+document.querySelector("#sign-out").addEventListener("click", signOut);
+document.querySelector("#sign-out-top").addEventListener("click", signOut);
 
 dialog.addEventListener("click", event => {
     if (event.target === dialog) dialog.close();
@@ -391,7 +610,14 @@ async function start() {
         if (error) throw error;
         profile = data;
         document.querySelector("#user-name").textContent = profile.full_name;
-        view = isBarber() ? "posts" : "feed";
+        document.querySelector("#business-name").textContent = profile.shop_name || (isBarber() ? "Minha barbearia" : "Cliente");
+        document.querySelector("#business-avatar").textContent = initials(profile.shop_name || profile.full_name);
+        document.querySelector("#greeting-name").textContent = profile.full_name.split(/\s+/)[0];
+        document.querySelector("#today-date").textContent = new Intl.DateTimeFormat("pt-BR", {
+            weekday: "long", day: "2-digit", month: "long", year: "numeric"
+        }).format(new Date()).toLocaleUpperCase("pt-BR");
+        document.querySelector("#role-label").textContent = isBarber() ? "PAINEL DO BARBEIRO" : "ÁREA DO CLIENTE";
+        view = isBarber() ? "overview" : "feed";
         await loadView(view);
     } catch (error) {
         renderError(error);

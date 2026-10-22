@@ -4,11 +4,14 @@ O site usa HTML e JavaScript no navegador, sem servidor de build. A chave public
 
 ## 1. Aplicar o banco de dados
 
-No painel do Supabase, abra **SQL Editor**, crie uma consulta e execute o conteudo de:
+Em um projeto novo, abra **SQL Editor** no painel do Supabase e execute as migracoes nesta ordem:
 
-`supabase/migrations/20261021200000_initial_schema.sql`
+- `supabase/migrations/20261021200000_initial_schema.sql`
+- `supabase/migrations/20261021230000_financial_entries.sql`
+- `supabase/migrations/20261021233000_inventory_items.sql`
+- `supabase/migrations/20261022000000_inventory_entry_dates.sql`
 
-Isso cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A conexao do repositorio ao GitHub nao executa esta migracao automaticamente.
+A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. Se o schema inicial e as duas migracoes de modulos ja foram aplicados, execute somente a quarta; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
 
 ## 2. Configurar a autenticacao
 
@@ -41,6 +44,7 @@ Sirva a pasta por HTTP usando Live Server ou a hospedagem escolhida; abrir `inde
 - Cadastro e login de barbeiro e cliente, confirmacao de e-mail e recuperacao de senha.
 - Links de confirmacao e recuperacao redirecionados para o caminho do GitHub Pages; a tela de acesso permite reenviar uma confirmacao expirada.
 - Perfil de barbeiro e cliente.
+- Visao geral do barbeiro, controle financeiro de entradas, saidas e saldo mensal, e estoque com alerta de minimo; compras de estoque sao lancadas como despesas. Os dados sao isolados por conta.
 - Cadastro e publicacao de servicos pelo barbeiro.
 - Feed de postagens com curtidas e comentarios.
 - Pedido de agendamento, confirmacao pelo barbeiro e cancelamento pelo cliente.

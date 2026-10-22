@@ -10,24 +10,47 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="home.css">
 </head>
 
-<body>
-    <div class="app-shell">
-        <header class="app-header">
-            <a class="app-brand" href="home.html"><span aria-hidden="true">✂</span> CORTE MAIS</a>
-            <div class="app-user">
-                <span id="user-name">Carregando...</span>
-                <button class="button button-quiet" id="sign-out" type="button">Sair</button>
-            </div>
-        </header>
-        <nav class="app-nav" id="app-nav" aria-label="Navegação principal"></nav>
-        <main class="app-main" id="app-main" tabindex="-1">
-            <p class="loading-state">Carregando sua conta...</p>
-        </main>
+<body class="painel-aplicativo">
+    <div class="estrutura-painel">
+            <aside class="barra-lateral" aria-label="Navegação principal">
+                <a class="marca-painel" href="home.html" aria-label="Corte Mais, início">
+                    <span class="simbolo-marca" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <circle cx="6" cy="6" r="3"></circle>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <path d="m8.1 8.1 11.8 11.8M20 4 8.1 15.9M12 12l3-3"></path>
+                        </svg>
+                    </span>
+                    <span class="nome-marca">CORTE MAIS<small>BARBER OPS</small></span>
+                </a>
+                <div class="seletor-negocio" aria-label="Conta atual">
+                    <span class="avatar avatar-negocio" id="business-avatar">CM</span>
+                    <span class="dados-negocio"><small id="business-name">Minha barbearia</small><strong id="user-name">Carregando...</strong></span>
+                </div>
+                <nav class="navegacao-painel" id="app-nav" aria-label="Navegação do painel"></nav>
+                <button class="botao-sair" id="sign-out" type="button"><span aria-hidden="true">↪</span> Sair da conta</button>
+            </aside>
+            <div class="area-aplicativo">
+                <header class="barra-superior">
+                    <div class="saudacao-topo">
+                        <span class="data-atual" id="today-date"></span>
+                        <p>Olá, <strong id="greeting-name">...</strong></p>
+                    </div>
+                    <div class="acoes-topo">
+                        <span class="eyebrow" id="role-label">CORTE MAIS</span>
+                        <button class="button button-quiet" id="sign-out-top" type="button">Sair</button>
+                    </div>
+                </header>
+                <main class="conteudo-painel" id="app-main" tabindex="-1">
+                    <p class="loading-state">Carregando sua conta...</p>
+                </main>
+        </div>
     </div>
-    <dialog id="app-dialog" class="app-dialog"></dialog>
-    <div id="app-notice" class="app-notice" role="status" aria-live="polite"></div>
+    <dialog id="app-dialog" class="dialogo-cliente" aria-label="Formulário do painel"></dialog>
+    <div id="app-notice" class="aviso-flutuante" role="status" aria-live="polite"></div>
     <script type="module" src="home.js"></script>
 </body>
 

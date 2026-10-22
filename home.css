@@ -152,10 +152,14 @@
     gap: 13px;
     min-height: 41px;
     padding: 0 12px;
+    border: 0;
     border-radius: 8px;
     color: #c7c3ba;
+    background: transparent;
     font-size: 12px;
+    text-align: left;
     text-decoration: none;
+    cursor: pointer;
     transition: color 150ms ease, background-color 150ms ease;
 }
 
@@ -336,6 +340,12 @@
 .valor-cliente { color: #47443d; font-size: 10px; font-weight: 600; white-space: nowrap; }
 .rodape-lista { width: 100%; min-height: 43px; justify-content: space-between; border-top: 1px solid #efede7; }
 .nota-dados { margin-top: 13px; color: #9b978e; font-size: 9px; text-align: right; }
+.acoes-atalho { display: grid; gap: 8px; padding: 0 18px 18px; }
+.atalho-painel { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: center; gap: 2px 10px; padding: 10px 0; border: 0; border-top: 1px solid #efede7; color: var(--texto); background: transparent; text-align: left; cursor: pointer; }
+.atalho-painel > span { display: grid; width: 30px; height: 30px; grid-row: span 2; place-items: center; border-radius: 8px; color: #80640e; background: #f8efca; font-size: 15px; }
+.atalho-painel strong { font-size: 11px; font-weight: 600; }
+.atalho-painel small { color: #918d84; font-size: 9px; }
+.atalho-painel:hover strong { color: #80640e; }
 .pagina-lista { padding-bottom: 5px; }
 .pagina-lista .linha-agendamento { min-height: 76px; grid-template-columns: 58px 40px minmax(0, 1fr) auto; gap: 14px; }
 .pagina-lista .avatar-agendamento { width: 38px; height: 38px; }
@@ -470,6 +480,11 @@
 .aviso-flutuante { position: fixed; right: 22px; bottom: 22px; z-index: 12; max-width: min(360px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid #34322c; border-radius: 7px; color: #fff; background: #22211e; box-shadow: 0 10px 35px rgba(0, 0, 0, .16); font-size: 11px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity 180ms ease, transform 180ms ease; }
 .aviso-flutuante.visivel { opacity: 1; transform: translateY(0); }
 .painel-aplicativo :focus-visible { outline: 3px solid rgba(197, 157, 74, .55); outline-offset: 2px; }
+.barra-superior .acoes-topo { min-height: 38px; }
+.barra-superior .acoes-topo .eyebrow { margin: 0; }
+.barra-superior .acoes-topo .button { min-height: 34px; font-size: 10px; }
+#sign-out-top { display: none; }
+.botao-sair { color: #dedbd4; background: transparent; cursor: pointer; text-align: left; }
 
 @media (max-width: 1100px) {
     .barra-superior { margin-right: 34px; margin-left: 34px; }
@@ -482,6 +497,7 @@
     .barra-lateral { position: relative; inset: auto; width: 100%; max-width: 100vw; overflow-x: hidden; padding: 13px 16px 16px; }
     .marca-painel { min-height: 38px; margin: 0 3px 12px; }
     .seletor-negocio, .botao-sair { display: none; }
+    #sign-out-top { display: inline-flex; }
     .navegacao-painel { width: 100%; min-width: 0; flex: 0 0 auto; flex-direction: row; gap: 17px; overflow: visible; padding: 0; }
     .grupo-navegacao { display: flex; flex: 0 0 auto; gap: 3px; }
     .grupo-navegacao + .grupo-navegacao { padding-left: 13px; border-left: 1px solid #3b3934; }

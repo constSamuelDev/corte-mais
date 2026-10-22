@@ -135,7 +135,12 @@ async function loadView(nextView) {
         if (view === "feed") await loadFeed();
         if (view === "posts") await loadPosts();
         if (view === "services") await loadServices(true);
-        if (view === "bookings") await loadBookings();
+        if (view === "bookings") {
+            await Promise.all([
+                loadBookings(),
+                ...(isBarber() ? [loadServices(true)] : [])
+            ]);
+        }
         if (view === "clients") await loadBookings();
         if (view === "finance") await loadFinancialEntries();
         if (view === "inventory") await loadInventoryItems();
@@ -296,7 +301,7 @@ function renderInventory() {
 }
 
 function renderFeed() {
-    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card"><span class="eyebrow">${safe(service.barber?.shop_name || service.barber?.full_name || "Barbearia")}</span><h3>${safe(service.name)}</h3><p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Agendar</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Volte em breve para conhecer as barbearias.</p>';
+    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card"><span class="eyebrow">${safe(service.barber?.shop_name || service.barber?.full_name || "Barbearia")}</span><h3>${safe(service.name)}</h3><p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Solicitar horário</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Quando uma barbearia cadastrar um serviço, você poderá solicitar um horário por aqui.</p>';
     const postCards = posts.length ? posts.map(post => {
         const image = usableImage(post.image_url);
         const comments = commentsByPost[post.id];
@@ -332,8 +337,15 @@ function renderBookings() {
                 ? `<button class="button" type="button" data-action="booking-status" data-status="completed" data-id="${safe(booking.id)}">Marcar concluído</button><button class="button button-danger" type="button" data-action="booking-status" data-status="cancelled" data-id="${safe(booking.id)}">Cancelar</button>`
                 : canCancel ? `<button class="button button-danger" type="button" data-action="cancel-booking" data-id="${safe(booking.id)}">Cancelar agendamento</button>` : "";
         return `<article class="card booking-card"><div><span class="status-pill ${statusClass}">${safe(statusLabel)}</span><h3>${safe(booking.service_name)}</h3><p>${isBarber() ? `Cliente: ${safe(booking.customer_name)}` : `Barbeiro: ${safe(booking.barber_name)} · ${safe(booking.shop_name || "")}`}</p><p class="muted">${dateTime(booking.starts_at)} · ${safe(booking.duration_minutes || Math.round((new Date(booking.ends_at) - new Date(booking.starts_at)) / 60000))} min</p><strong class="price">${money(booking.price)}</strong></div><div class="booking-actions">${controls}</div></article>`;
-    }).join("") : '<p class="empty-state">Nenhum agendamento por aqui ainda.</p>';
-    main.innerHTML = `${pageHeading(isBarber() ? "ROTINA" : "SUA AGENDA", isBarber() ? "Agenda da barbearia" : "Meus agendamentos", isBarber() ? "Confirme e acompanhe os pedidos de horário dos clientes." : "Consulte o status dos seus próximos atendimentos.")}${cards}`;
+    }).join("") : isBarber()
+        ? services.some(service => service.active)
+            ? '<p class="empty-state">Ainda não há pedidos. Quando um cliente solicitar um horário pelo Feed, o pedido aparecerá aqui para você confirmar ou recusar.</p>'
+            : '<div class="empty-state"><p>Seus clientes poderão solicitar horários pelo Feed assim que você publicar um serviço ativo.</p><button class="button button-primary" type="button" data-view="services">Cadastrar serviço</button></div>'
+        : '<p class="empty-state">Nenhum agendamento por aqui ainda. Encontre um serviço no Feed e solicite um horário.</p>';
+    const action = isBarber()
+        ? ""
+        : '<button class="button button-primary" type="button" data-view="feed">Solicitar agendamento</button>';
+    main.innerHTML = `${pageHeading(isBarber() ? "ROTINA" : "SUA AGENDA", isBarber() ? "Agenda da barbearia" : "Meus agendamentos", isBarber() ? "Os clientes solicitam horários pelo Feed; confirme ou recuse os pedidos aqui." : "Consulte seus pedidos e solicite novos horários.", action)}${cards}`;
 }
 
 function renderProfile() {

@@ -47,7 +47,7 @@ Sirva a pasta por HTTP usando Live Server ou a hospedagem escolhida; abrir `inde
 - Visao geral do barbeiro, controle financeiro de entradas, saidas e saldo mensal, e estoque com alerta de minimo; compras de estoque sao lancadas como despesas. Os dados sao isolados por conta.
 - Cadastro e publicacao de servicos pelo barbeiro.
 - Feed de postagens com curtidas e comentarios.
-- Pedido de agendamento, confirmacao pelo barbeiro e cancelamento pelo cliente.
+- Agendamentos: o cliente solicita um horario a partir de um servico ativo no Feed; o barbeiro confirma ou recusa o pedido na Agenda, e o cliente pode cancelar.
 - Protecao RLS e bloqueio de dois agendamentos ativos que se sobreponham para o mesmo barbeiro.
 
 As imagens de postagens usam links HTTP/HTTPS nesta versao. O banco ainda nao define expediente, folgas ou antecedencia minima: qualquer horario futuro esta sujeito a disponibilidade e a regra de conflito. O armazenamento de imagens no Supabase Storage e a configuracao de horarios podem ser adicionados em seguida.

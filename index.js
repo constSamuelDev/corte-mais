@@ -7,8 +7,14 @@ const nameInput = document.querySelector("#full-name");
 const shopInput = document.querySelector("#shop-name");
 const passwordInput = document.querySelector("#password");
 const submitButton = document.querySelector("#botao-acesso");
+const resendConfirmationButton = document.querySelector("#reenviar-confirmacao");
 let selectedRole = "barber";
 let mode = "login";
+let confirmationExpired = false;
+
+function authRedirectUrl() {
+    return `${window.location.origin}${window.location.pathname}`;
+}
 
 function showStatus(message, isError = false) {
     status.textContent = message;
@@ -20,6 +26,7 @@ function setMode(nextMode) {
     mode = nextMode;
     const signup = mode === "signup";
     const recovery = mode === "recovery";
+    resendConfirmationButton.hidden = !signup && !confirmationExpired;
     document.querySelector("#modo-entrar").classList.toggle("modo-acesso-ativo", !signup);
     document.querySelector("#modo-criar").classList.toggle("modo-acesso-ativo", signup);
     document.querySelector(".tipo-acesso").hidden = recovery || !signup;
@@ -93,6 +100,7 @@ form.addEventListener("submit", async event => {
                 email,
                 password,
                 options: {
+                    emailRedirectTo: authRedirectUrl(),
                     data: {
                         role: selectedRole,
                         full_name: nameInput.value.trim(),
@@ -127,7 +135,7 @@ document.querySelector("#recuperar-senha").addEventListener("click", async () =>
     try {
         const client = exigirSupabase();
         const { error } = await client.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}${window.location.pathname}?reset=1`
+            redirectTo: `${authRedirectUrl()}?reset=1`
         });
         if (error) throw error;
         showStatus("Se houver uma conta com esse e-mail, enviaremos as instruções de recuperação.");
@@ -136,7 +144,44 @@ document.querySelector("#recuperar-senha").addEventListener("click", async () =>
     }
 });
 
-if (new URLSearchParams(window.location.search).has("reset")) {
+resendConfirmationButton.addEventListener("click", async () => {
+    const email = form.elements.email.value.trim();
+    if (!email) {
+        showStatus("Informe seu e-mail para reenviar a confirmação.", true);
+        form.elements.email.focus();
+        return;
+    }
+    resendConfirmationButton.disabled = true;
+    try {
+        const client = exigirSupabase();
+        const { error } = await client.auth.resend({
+            type: "signup",
+            email,
+            options: { emailRedirectTo: authRedirectUrl() }
+        });
+        if (error) throw error;
+        showStatus("Se a conta ainda precisar de confirmação, enviaremos um novo link para esse e-mail.");
+        resendConfirmationButton.hidden = true;
+    } catch (error) {
+        showStatus(error.message || "Não foi possível reenviar a confirmação.", true);
+    } finally {
+        resendConfirmationButton.disabled = false;
+    }
+});
+
+const authError = new URLSearchParams(window.location.hash.slice(1));
+if (authError.get("error_code") === "otp_expired" || authError.get("error") === "access_denied") {
+    const expiredConfirmation = authError.get("error_code") === "otp_expired";
+    window.history.replaceState({}, "", window.location.pathname);
+    confirmationExpired = expiredConfirmation;
+    setMode("login");
+    if (expiredConfirmation) {
+        showStatus("Esse link de confirmação expirou ou já foi usado. Informe seu e-mail e solicite um novo link.", true);
+        resendConfirmationButton.hidden = false;
+    } else {
+        showStatus("Não foi possível confirmar este acesso. Solicite um novo link de confirmação.", true);
+    }
+} else if (new URLSearchParams(window.location.search).has("reset")) {
     setMode("recovery");
 } else {
     setMode("login");

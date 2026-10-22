@@ -39,6 +39,7 @@ Sirva a pasta por HTTP usando Live Server ou a hospedagem escolhida; abrir `inde
 ## O que esta primeira versao inclui
 
 - Cadastro e login de barbeiro e cliente, confirmacao de e-mail e recuperacao de senha.
+- Links de confirmacao e recuperacao redirecionados para o caminho do GitHub Pages; a tela de acesso permite reenviar uma confirmacao expirada.
 - Perfil de barbeiro e cliente.
 - Cadastro e publicacao de servicos pelo barbeiro.
 - Feed de postagens com curtidas e comentarios.

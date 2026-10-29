@@ -17,7 +17,10 @@ let commentsByPost = {};
 let likesByPost = {};
 let avatarVersion = Date.now();
 
-const isBarber = () => profile.role === "barber";
+const isBarber = () => {
+    if (!profile) throw new Error("O perfil da conta ainda não foi carregado. Recarregue a página.");
+    return profile.role === "barber";
+};
 const safe = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
 })[char]);
@@ -739,6 +742,9 @@ async function start() {
         const { data, error } = await supabase.from("profiles")
             .select("id, role, full_name, shop_name, bio, avatar_path").eq("id", user.id).single();
         if (error) throw error;
+        if (!data || !["barber", "customer"].includes(data.role)) {
+            throw new Error("Não foi possível encontrar um perfil válido para esta conta. Entre novamente ou contate o suporte.");
+        }
         profile = data;
         updateProfileHeader();
         document.querySelector("#today-date").textContent = new Intl.DateTimeFormat("pt-BR", {

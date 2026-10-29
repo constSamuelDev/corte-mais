@@ -51,6 +51,132 @@ const avatarContents = (path, name) => {
     const { data } = supabase.storage.from("profile-photos").getPublicUrl(path);
     return `${initialsMarkup}<img class="imagem-perfil" src="${safe(`${data.publicUrl}?v=${avatarVersion}`)}" alt="" aria-hidden="true">`;
 };
+const mapsLink = (latitude, longitude) => {
+    if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) return "";
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return "";
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+    return `<a class="link-localizacao" href="${safe(url)}" target="_blank" rel="noopener noreferrer">Abrir localização no mapa <span aria-hidden="true">↗</span></a>`;
+};
+
+function loadLeafletStyles() {
+    const stylesheetId = "leaflet-stylesheet";
+    const existingStylesheet = document.getElementById(stylesheetId);
+    if (existingStylesheet?.dataset.loaded === "true") return Promise.resolve();
+    if (loadLeafletStyles.promise) return loadLeafletStyles.promise;
+
+    loadLeafletStyles.promise = new Promise((resolve, reject) => {
+        const stylesheet = document.createElement("link");
+        stylesheet.id = stylesheetId;
+        stylesheet.rel = "stylesheet";
+        stylesheet.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        stylesheet.onload = () => {
+            stylesheet.dataset.loaded = "true";
+            resolve();
+        };
+        stylesheet.onerror = () => {
+            stylesheet.remove();
+            loadLeafletStyles.promise = null;
+            reject(new Error("Não foi possível carregar os estilos do mapa."));
+        };
+        document.head.append(stylesheet);
+    });
+    return loadLeafletStyles.promise;
+}
+
+function loadLeaflet() {
+    if (loadLeaflet.promise) return loadLeaflet.promise;
+    const scriptPromise = window.L
+        ? Promise.resolve(window.L)
+        : new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            script.onload = () => window.L ? resolve(window.L) : reject(new Error("A biblioteca do mapa não foi inicializada."));
+            script.onerror = () => {
+                script.remove();
+                reject(new Error("Não foi possível carregar o mapa. Verifique a conexão e tente novamente."));
+            };
+            document.head.append(script);
+        });
+
+    loadLeaflet.promise = Promise.all([loadLeafletStyles(), scriptPromise])
+        .then(([, leaflet]) => leaflet)
+        .catch(error => {
+            loadLeaflet.promise = null;
+            throw error;
+        });
+    return loadLeaflet.promise;
+}
+
+async function openLocationPicker() {
+    const form = document.querySelector("#profile-form");
+    const latitudeInput = form.elements.namedItem("location_latitude");
+    const longitudeInput = form.elements.namedItem("location_longitude");
+    const currentLatitude = latitudeInput.value === "" ? null : Number(latitudeInput.value);
+    const currentLongitude = longitudeInput.value === "" ? null : Number(longitudeInput.value);
+    let selected = Number.isFinite(currentLatitude) && Number.isFinite(currentLongitude)
+        ? { latitude: currentLatitude, longitude: currentLongitude }
+        : null;
+    let marker;
+    let map;
+    const fields = `<p class="texto-confirmacao">Clique no mapa para marcar o endereço da barbearia. Depois salve o perfil para publicar a localização.</p><div id="location-map" class="mapa-seletor" role="application" aria-label="Mapa para selecionar a localização da barbearia"></div><p id="location-map-status" class="estado-mapa">${selected ? `Ponto selecionado: ${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}` : "Nenhum ponto selecionado."}</p><button class="botao-secundario" id="location-use-device" type="button">Usar minha localização atual</button>`;
+    openDialog("Localização da barbearia", "ESCOLHA NO MAPA", fields, "Usar este ponto", async () => {
+        if (!selected) throw new Error("Clique no mapa ou use sua localização atual para escolher um ponto.");
+        latitudeInput.value = String(selected.latitude);
+        longitudeInput.value = String(selected.longitude);
+        form.querySelector("#location-summary").textContent = `Ponto escolhido: ${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}. Salve o perfil para publicar.`;
+    });
+
+    const status = dialog.querySelector("#location-map-status");
+    const updateSelection = coordinates => {
+        selected = {
+            latitude: Number(coordinates.lat.toFixed(6)),
+            longitude: Number(coordinates.lng.toFixed(6))
+        };
+        if (marker) marker.setLatLng(coordinates);
+        else marker = window.L.marker(coordinates).addTo(map);
+        status.textContent = `Ponto selecionado: ${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}`;
+    };
+
+    const leaflet = await loadLeaflet();
+    const leaflet = await loadLeaflet();
+    const center = selected
+        ? [selected.latitude, selected.longitude]
+        : [-14.235, -51.9253];
+    map = leaflet.map("location-map").setView(center, selected ? 16 : 4);
+    leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
+    }).addTo(map);
+    map.on("click", event => updateSelection(event.latlng));
+    if (selected) marker = leaflet.marker(center).addTo(map);
+    window.requestAnimationFrame(() => map.invalidateSize());
+
+    dialog.querySelector("#location-use-device").addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            showNotice("Este navegador não oferece acesso à localização.", true);
+            return;
+        }
+        status.textContent = "Buscando sua localização...";
+        navigator.geolocation.getCurrentPosition(
+            result => {
+                const coordinates = leaflet.latLng(result.coords.latitude, result.coords.longitude);
+                map.setView(coordinates, 16);
+                updateSelection(coordinates);
+            },
+            error => {
+                status.textContent = selected
+                    ? `Ponto selecionado: ${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}`
+                    : "Nenhum ponto selecionado.";
+                showNotice(error.message || "Não foi possível obter sua localização.", true);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    });
+
+    dialog.addEventListener("close", () => map.remove(), { once: true });
+}
 
 function updateProfileHeader() {
     document.querySelector("#user-name").textContent = profile.full_name;
@@ -76,6 +202,9 @@ function renderError(error) {
 function profileMigrationError(error) {
     if (error.code === "42703" && /avatar_path/i.test(error.message || "")) {
         return new Error("O banco Supabase ainda não foi atualizado para fotos de perfil. No SQL Editor do Supabase, execute a migração supabase/migrations/20261028010000_post_engagement_and_profile_photos.sql e tente novamente.");
+    }
+    if (error.code === "42703" && /location_latitude|location_longitude/i.test(error.message || "")) {
+        return new Error("O banco Supabase ainda não foi atualizado para localização das barbearias. Execute a migração supabase/migrations/20261028040000_barber_map_locations.sql e tente novamente.");
     }
     return error;
 }
@@ -173,7 +302,7 @@ async function loadView(nextView) {
         render();
         main.focus({ preventScroll: true });
     } catch (error) {
-        renderError(error);
+        renderError(profileMigrationError(error));
     }
 }
 
@@ -186,12 +315,22 @@ async function loadFeed() {
     if (serviceError) throw serviceError;
     posts = feed || [];
     services = serviceRows || [];
-    const barberIds = [...new Set(services.map(item => item.barber_id))];
+    const barberIds = [...new Set([
+        ...services.map(item => item.barber_id),
+        ...posts.map(item => item.barber_id)
+    ])];
     if (barberIds.length) {
-        const { data, error } = await supabase.from("profiles").select("id, full_name, shop_name").in("id", barberIds);
+        const { data, error } = await supabase.from("profiles")
+            .select("id, full_name, shop_name, location_latitude, location_longitude")
+            .in("id", barberIds);
         if (error) throw error;
         const barbers = new Map((data || []).map(item => [item.id, item]));
         services = services.map(item => ({ ...item, barber: barbers.get(item.barber_id) }));
+        posts = posts.map(item => ({
+            ...item,
+            location_latitude: barbers.get(item.barber_id)?.location_latitude,
+            location_longitude: barbers.get(item.barber_id)?.location_longitude
+        }));
     }
 }
 
@@ -341,11 +480,11 @@ function renderInventory() {
 }
 
 function renderFeed() {
-    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card"><span class="eyebrow">${safe(service.barber?.shop_name || service.barber?.full_name || "Barbearia")}</span><h3>${safe(service.name)}</h3><p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Solicitar horário</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Quando uma barbearia cadastrar um serviço, você poderá solicitar um horário por aqui.</p>';
+    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card"><span class="eyebrow">${safe(service.barber?.shop_name || service.barber?.full_name || "Barbearia")}</span><h3>${safe(service.name)}</h3>${mapsLink(service.barber?.location_latitude, service.barber?.location_longitude)}<p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Solicitar horário</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Quando uma barbearia cadastrar um serviço, você poderá solicitar um horário por aqui.</p>';
     const postCards = posts.length ? posts.map(post => {
         const image = usableImage(post.image_url);
         const comments = commentsByPost[post.id];
-        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, post.barber_name)}</span><div><span class="eyebrow">${safe(post.shop_name || "Barbearia")}</span><h3>${safe(post.barber_name)}</h3></div></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
+        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, post.barber_name)}</span><div><span class="eyebrow">${safe(post.shop_name || "Barbearia")}</span><h3>${safe(post.barber_name)}</h3>${mapsLink(post.location_latitude, post.location_longitude)}</div></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
     }).join("") : '<p class="empty-state">Os barbeiros ainda não publicaram novidades.</p>';
     main.innerHTML = `${pageHeading("COMUNIDADE", "Feed dos barbeiros", "Acompanhe as novidades, curta, comente e agende seu próximo atendimento.")}<section><div class="card-header"><div><span class="eyebrow">NOVIDADES</span><h2>Postagens</h2></div></div>${postCards}</section><section>${serviceCards}</section>`;
 }
@@ -394,7 +533,10 @@ function renderBookings() {
 
 function renderProfile() {
     const role = isBarber() ? "BARBEIRO" : "CLIENTE";
-    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span><div class="campo-foto-perfil"><span class="avatar avatar-perfil-grande">${avatarContents(profile.avatar_path, profile.full_name)}</span><div class="field"><label for="profile-avatar">Foto de perfil</label><input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>Selecione uma imagem JPG, PNG ou WebP de até 5 MB. A foto ficará visível na plataforma.</small>${profile.avatar_path ? '<label class="opcao-remover-foto"><input type="checkbox" name="remove_avatar"> Remover foto atual</label>' : ""}</div></div>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
+    const locationFields = isBarber()
+        ? `<section class="localizacao-perfil"><div><strong>Localização da barbearia</strong><p id="location-summary">${profile.location_latitude !== null && profile.location_latitude !== undefined && profile.location_longitude !== null && profile.location_longitude !== undefined ? "Localização salva e visível aos clientes." : "Adicione o ponto da barbearia para que os clientes possam encontrá-la."}</p>${mapsLink(profile.location_latitude, profile.location_longitude)}</div><button class="botao-secundario" type="button" data-action="choose-location">Escolher no mapa</button><input type="hidden" name="location_latitude" value="${safe(profile.location_latitude ?? "")}"><input type="hidden" name="location_longitude" value="${safe(profile.location_longitude ?? "")}"></section>`
+        : "";
+    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span><div class="campo-foto-perfil"><span class="avatar avatar-perfil-grande">${avatarContents(profile.avatar_path, profile.full_name)}</span><div class="field"><label for="profile-avatar">Foto de perfil</label><input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>Selecione uma imagem JPG, PNG ou WebP de até 5 MB. A foto ficará visível na plataforma.</small>${profile.avatar_path ? '<label class="opcao-remover-foto"><input type="checkbox" name="remove_avatar"> Remover foto atual</label>' : ""}</div></div>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}${locationFields}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
 }
 
 function bookingDialog(serviceList, barberId, barberName = "") {
@@ -441,6 +583,7 @@ document.addEventListener("click", async event => {
             if (profile) await loadView(view);
             else await start();
         }
+        else if (action === "choose-location") await openLocationPicker();
         else if (action === "new-post") {
             const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_url", "Link de imagem (opcional)", "url", { placeholder: "https://...", max: 2048, full: true })}`;
             openDialog("Nova postagem", "COMPARTILHE COM SEUS CLIENTES", fields, "Publicar", async form => {
@@ -672,6 +815,24 @@ document.addEventListener("submit", async event => {
         if (isBarber()) {
             updates.shop_name = String(values.get("shop_name")).trim();
             updates.bio = String(values.get("bio") || "").trim();
+            const latitude = String(values.get("location_latitude") || "");
+            const longitude = String(values.get("location_longitude") || "");
+            if (Boolean(latitude) !== Boolean(longitude)) {
+                showNotice("Selecione novamente o ponto da barbearia no mapa.", true);
+                return;
+            }
+            if (latitude && longitude) {
+                updates.location_latitude = Number(latitude);
+                updates.location_longitude = Number(longitude);
+                if (!Number.isFinite(updates.location_latitude) || !Number.isFinite(updates.location_longitude)
+                    || Math.abs(updates.location_latitude) > 90 || Math.abs(updates.location_longitude) > 180) {
+                    showNotice("A localização selecionada não é válida. Escolha um ponto no mapa.", true);
+                    return;
+                }
+            } else {
+                updates.location_latitude = null;
+                updates.location_longitude = null;
+            }
         }
         submit.disabled = true;
         try {
@@ -758,7 +919,8 @@ async function start() {
         }
         user = session.user;
         const { data, error } = await supabase.from("profiles")
-            .select("id, role, full_name, shop_name, bio, avatar_path").eq("id", user.id).single();
+            .select("id, role, full_name, shop_name, bio, avatar_path, location_latitude, location_longitude")
+            .eq("id", user.id).single();
         if (error) throw error;
         if (!data || !["barber", "customer"].includes(data.role)) {
             throw new Error("Não foi possível encontrar um perfil válido para esta conta. Entre novamente ou contate o suporte.");

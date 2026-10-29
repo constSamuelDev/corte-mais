@@ -14,8 +14,9 @@ Em um projeto novo, abra **SQL Editor** no painel do Supabase e execute as migra
 - `supabase/migrations/20261028010000_post_engagement_and_profile_photos.sql`
 - `supabase/migrations/20261028020000_client_booking_avatars.sql`
 - `supabase/migrations/20261028030000_refresh_client_avatar_bookings.sql`
+- `supabase/migrations/20261028040000_barber_map_locations.sql`
 
-A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. A sexta habilita fotos de perfil no Storage e consultas de curtidas e comentarios nas postagens do barbeiro. A setima inclui as fotos dos clientes nos dados de agendamento usados pelo painel. A oitava recria a funcao de agendamentos e atualiza o cache de schema do Supabase para disponibilizar os caminhos das fotos. Se as sete primeiras migracoes ja foram aplicadas, execute somente a oitava; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
+A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. A sexta habilita fotos de perfil no Storage e consultas de curtidas e comentarios nas postagens do barbeiro. A setima inclui as fotos dos clientes nos dados de agendamento usados pelo painel. A oitava recria a funcao de agendamentos e atualiza o cache de schema do Supabase para disponibilizar os caminhos das fotos. A nona adiciona coordenadas para localizacao das barbearias. Se as oito primeiras migracoes ja foram aplicadas, execute somente a nona; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
 
 ## 2. Configurar a autenticacao
 
@@ -52,6 +53,7 @@ Sirva a pasta por HTTP usando Live Server ou a hospedagem escolhida; abrir `inde
 - Cadastro e publicacao de servicos pelo barbeiro.
 - Feed de postagens com curtidas e comentarios; o barbeiro pode consultar os nomes de quem curtiu e os comentarios nas proprias postagens.
 - Fotos de perfil para clientes e barbeiros, escolhidas do dispositivo (JPG, PNG ou WebP, ate 5 MB). As fotos ficam em um bucket publico para aparecerem na plataforma; cada usuario pode enviar e remover apenas os arquivos da propria pasta.
+- Localizacao das barbearias escolhida em um mapa OpenStreetMap, com link para abrir o ponto no Google Maps. O mapa nao exige chave de API; o navegador pode opcionalmente fornecer a localizacao atual com permissao do usuario.
 - Agendamentos: o cliente solicita um horario a partir de um servico ativo no Feed; o barbeiro confirma ou recusa o pedido na Agenda, e o cliente pode cancelar.
 - Protecao RLS e bloqueio de dois agendamentos ativos que se sobreponham para o mesmo barbeiro.
 

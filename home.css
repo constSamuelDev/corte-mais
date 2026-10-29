@@ -212,6 +212,14 @@
 .avatar-perfil-grande { width: 76px; height: 76px; }
 .opcao-remover-foto { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: #9c3e32 !important; }
 .opcao-remover-foto input { width: auto !important; min-height: 0 !important; }
+.localizacao-perfil { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0; padding: 15px; border: 1px solid var(--linha); border-radius: 7px; background: #faf9f5; }
+.localizacao-perfil > div { display: grid; gap: 5px; }
+.localizacao-perfil > div > strong { font-size: 11px; }
+.localizacao-perfil p { margin: 0; color: #858178; font-size: 10px; line-height: 1.5; }
+.link-localizacao { display: inline-flex; align-items: center; gap: 5px; margin: 8px 0; color: #80640e; font-size: 10px; font-weight: 600; text-decoration: none; }
+.link-localizacao:hover { color: #5f4b0d; text-decoration: underline; }
+.mapa-seletor { width: 100%; height: min(52vh, 390px); min-height: 240px; border: 1px solid var(--linha); border-radius: 7px; z-index: 0; }
+.estado-mapa { margin: 0; color: #77746b; font-size: 10px; }
 .area-aplicativo { min-height: 100vh; margin-left: 246px; }
 
 .barra-superior {
@@ -600,6 +608,7 @@
     .cartao-perfil h2 { font-size: 18px; }
     .campo-foto-perfil { align-items: flex-start; gap: 12px; }
     .avatar-perfil-grande { width: 60px; height: 60px; }
+    .localizacao-perfil { align-items: flex-start; flex-direction: column; }
     .campos-duplos { grid-template-columns: 1fr; }
     .dialogo-cliente { padding: 20px; }
     .grade-resumo-financeiro { grid-template-columns: 1fr; gap: 8px; }

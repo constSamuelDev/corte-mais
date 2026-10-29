@@ -215,6 +215,9 @@ async function loadBookings() {
     const { data, error } = await supabase.rpc("get_my_bookings");
     if (error) throw error;
     bookings = data || [];
+    if (isBarber() && bookings.length && !("customer_avatar_path" in bookings[0])) {
+        showNotice("O Supabase ainda não está retornando as fotos dos clientes. Execute a migração 20261028030000_refresh_client_avatar_bookings.sql.", true);
+    }
 }
 
 async function loadFinancialEntries() {

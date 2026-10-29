@@ -11,8 +11,9 @@ Em um projeto novo, abra **SQL Editor** no painel do Supabase e execute as migra
 - `supabase/migrations/20261021233000_inventory_items.sql`
 - `supabase/migrations/20261022000000_inventory_entry_dates.sql`
 - `supabase/migrations/20261028000000_financial_entry_updates.sql`
+- `supabase/migrations/20261028010000_post_engagement_and_profile_photos.sql`
 
-A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. Se as quatro primeiras migracoes ja foram aplicadas, execute somente a quinta; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
+A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. A sexta habilita fotos de perfil no Storage e consultas de curtidas e comentarios nas postagens do barbeiro. Se as cinco primeiras migracoes ja foram aplicadas, execute somente a sexta; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
 
 ## 2. Configurar a autenticacao
 
@@ -47,8 +48,9 @@ Sirva a pasta por HTTP usando Live Server ou a hospedagem escolhida; abrir `inde
 - Perfil de barbeiro e cliente.
 - Visao geral do barbeiro, controle financeiro de entradas, saidas e saldo mensal, e estoque com alerta de minimo; compras de estoque sao lancadas como despesas. Os dados sao isolados por conta.
 - Cadastro e publicacao de servicos pelo barbeiro.
-- Feed de postagens com curtidas e comentarios.
+- Feed de postagens com curtidas e comentarios; o barbeiro pode consultar os nomes de quem curtiu e os comentarios nas proprias postagens.
+- Fotos de perfil para clientes e barbeiros, escolhidas do dispositivo (JPG, PNG ou WebP, ate 5 MB). As fotos ficam em um bucket publico para aparecerem na plataforma; cada usuario pode enviar e remover apenas os arquivos da propria pasta.
 - Agendamentos: o cliente solicita um horario a partir de um servico ativo no Feed; o barbeiro confirma ou recusa o pedido na Agenda, e o cliente pode cancelar.
 - Protecao RLS e bloqueio de dois agendamentos ativos que se sobreponham para o mesmo barbeiro.
 
-As imagens de postagens usam links HTTP/HTTPS nesta versao. O banco ainda nao define expediente, folgas ou antecedencia minima: qualquer horario futuro esta sujeito a disponibilidade e a regra de conflito. O armazenamento de imagens no Supabase Storage e a configuracao de horarios podem ser adicionados em seguida.
+As imagens das postagens usam links HTTP/HTTPS nesta versao. O banco ainda nao define expediente, folgas ou antecedencia minima: qualquer horario futuro esta sujeito a disponibilidade e a regra de conflito. A migracao de fotos cria o bucket publico `profile-photos` e define as politicas de acesso ao Storage.

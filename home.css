@@ -188,6 +188,26 @@
 
 .botao-sair:hover { border-color: var(--amarelo); color: var(--amarelo); }
 .botao-sair span { color: var(--amarelo); font-size: 17px; }
+
+.avatar .texto-avatar { position: relative; z-index: 0; }
+.avatar .imagem-perfil { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.cabecalho-postagem { display: flex; align-items: center; gap: 10px; }
+.avatar-postagem { width: 38px; height: 38px; }
+.avatar-comentario { width: 30px; height: 30px; }
+.detalhes-interacao, .lista-curtidas { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #efede7; }
+.detalhes-interacao .comment-item { align-items: center; justify-content: flex-start; margin: 0; }
+.detalhes-interacao .comment-item > div { display: grid; min-width: 0; gap: 3px; }
+.detalhes-interacao .comment-item > div > span { overflow-wrap: anywhere; color: #5f5b53; }
+.detalhes-interacao .comment-item time, .curtida-item time { color: #918d84; font-size: 9px; }
+.curtida-item { display: flex; align-items: center; gap: 9px; }
+.curtida-item strong { font-size: 11px; }
+.curtida-item time { margin-left: auto; }
+.campo-foto-perfil { display: flex; align-items: center; gap: 17px; margin-bottom: 15px; }
+.campo-foto-perfil .field { flex: 1; min-width: 0; margin-bottom: 0; }
+.campo-foto-perfil small { color: #858178; font-size: 10px; line-height: 1.5; }
+.avatar-perfil-grande { width: 76px; height: 76px; }
+.opcao-remover-foto { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: #9c3e32 !important; }
+.opcao-remover-foto input { width: auto !important; min-height: 0 !important; }
 .area-aplicativo { min-height: 100vh; margin-left: 246px; }
 
 .barra-superior {
@@ -575,6 +595,8 @@
     .cartao-perfil { align-items: flex-start; gap: 15px; padding: 20px 16px; }
     .avatar-perfil-grande { width: 62px; height: 62px; }
     .cartao-perfil h2 { font-size: 18px; }
+    .campo-foto-perfil { align-items: flex-start; gap: 12px; }
+    .avatar-perfil-grande { width: 60px; height: 60px; }
     .campos-duplos { grid-template-columns: 1fr; }
     .dialogo-cliente { padding: 20px; }
     .grade-resumo-financeiro { grid-template-columns: 1fr; gap: 8px; }

@@ -14,6 +14,8 @@ let bookings = [];
 let financialEntries = [];
 let inventoryItems = [];
 let commentsByPost = {};
+let likesByPost = {};
+let avatarVersion = Date.now();
 
 const isBarber = () => profile.role === "barber";
 const safe = value => String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -40,6 +42,20 @@ const usableImage = value => {
         return "";
     }
 };
+const avatarContents = (path, name) => {
+    const initialsMarkup = `<span class="texto-avatar">${safe(initials(name))}</span>`;
+    if (!path) return initialsMarkup;
+    const { data } = supabase.storage.from("profile-photos").getPublicUrl(path);
+    return `${initialsMarkup}<img class="imagem-perfil" src="${safe(`${data.publicUrl}?v=${avatarVersion}`)}" alt="" aria-hidden="true">`;
+};
+
+function updateProfileHeader() {
+    document.querySelector("#user-name").textContent = profile.full_name;
+    document.querySelector("#business-name").textContent = profile.shop_name || (isBarber() ? "Minha barbearia" : "Cliente");
+    const avatar = document.querySelector("#business-avatar");
+    avatar.innerHTML = avatarContents(profile.avatar_path, profile.shop_name || profile.full_name);
+    document.querySelector("#greeting-name").textContent = profile.full_name.split(/\s+/)[0];
+}
 
 function showNotice(message, isError = false) {
     notice.textContent = message;
@@ -311,7 +327,7 @@ function renderFeed() {
     const postCards = posts.length ? posts.map(post => {
         const image = usableImage(post.image_url);
         const comments = commentsByPost[post.id];
-        return `<article class="card feed-card"><div class="card-header"><div><span class="eyebrow">${safe(post.shop_name || "Barbearia")}</span><h3>${safe(post.barber_name)}</h3></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
+        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, post.barber_name)}</span><div><span class="eyebrow">${safe(post.shop_name || "Barbearia")}</span><h3>${safe(post.barber_name)}</h3></div></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
     }).join("") : '<p class="empty-state">Os barbeiros ainda não publicaram novidades.</p>';
     main.innerHTML = `${pageHeading("COMUNIDADE", "Feed dos barbeiros", "Acompanhe as novidades, curta, comente e agende seu próximo atendimento.")}<section><div class="card-header"><div><span class="eyebrow">NOVIDADES</span><h2>Postagens</h2></div></div>${postCards}</section><section>${serviceCards}</section>`;
 }
@@ -320,9 +336,13 @@ function renderPosts() {
     const action = '<button class="button button-primary" type="button" data-action="new-post">Nova postagem</button>';
     const cards = posts.length ? posts.map(post => {
         const image = usableImage(post.image_url);
-        return `<article class="card"><div class="card-header"><div><span class="eyebrow">${safe(post.shop_name || profile.shop_name)}</span><time class="muted">${dateTime(post.created_at)}</time></div><button class="button button-danger" type="button" data-action="delete-post" data-id="${safe(post.id)}">Excluir</button></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem da postagem" loading="lazy">` : ""}<p class="muted">♥ ${safe(post.likes_count)} curtidas · ${safe(post.comments_count)} comentários</p></article>`;
+        const comments = commentsByPost[post.id];
+        const likes = likesByPost[post.id];
+        const commentList = comments === undefined ? "" : `<div class="detalhes-interacao">${comments.length ? comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span><time>${dateTime(comment.created_at)}</time></div></div>`).join("") : '<p class="muted">Nenhum comentário nesta postagem.</p>'}</div>`;
+        const likeList = likes === undefined ? "" : `<div class="lista-curtidas">${likes.length ? likes.map(like => `<div class="curtida-item"><span class="avatar avatar-comentario">${avatarContents(like.avatar_path, like.profile_name)}</span><strong>${safe(like.profile_name)}</strong><time>${dateTime(like.created_at)}</time></div>`).join("") : '<p class="muted">Esta postagem ainda não recebeu curtidas.</p>'}</div>`;
+        return `<article class="card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, profile.full_name)}</span><div><span class="eyebrow">${safe(post.shop_name || profile.shop_name)}</span><time class="muted">${dateTime(post.created_at)}</time></div></div><button class="button button-danger" type="button" data-action="delete-post" data-id="${safe(post.id)}">Excluir</button></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem da postagem" loading="lazy">` : ""}<p class="muted">♥ ${safe(post.likes_count)} curtidas · ${safe(post.comments_count)} comentários</p><div class="feed-actions"><button class="button" type="button" data-action="post-likes" data-id="${safe(post.id)}">${likes === undefined ? "Ver curtidas" : "Ocultar curtidas"} (${safe(post.likes_count)})</button><button class="button" type="button" data-action="post-comments" data-id="${safe(post.id)}">${comments === undefined ? "Ver comentários" : "Ocultar comentários"} (${safe(post.comments_count)})</button></div>${likeList}${commentList}</article>`;
     }).join("") : '<p class="empty-state">Compartilhe seu primeiro trabalho, novidade ou aviso com os clientes.</p>';
-    main.innerHTML = `${pageHeading("CONTEÚDO", "Suas postagens", "Publique novidades para os clientes que acompanham a comunidade.", action)}${cards}`;
+    main.innerHTML = `${pageHeading("CONTEÚDO", "Suas postagens", "Publique novidades e acompanhe curtidas e comentários dos clientes.", action)}${cards}`;
 }
 
 function renderServices() {
@@ -356,7 +376,7 @@ function renderBookings() {
 
 function renderProfile() {
     const role = isBarber() ? "BARBEIRO" : "CLIENTE";
-    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
+    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span><div class="campo-foto-perfil"><span class="avatar avatar-perfil-grande">${avatarContents(profile.avatar_path, profile.full_name)}</span><div class="field"><label for="profile-avatar">Foto de perfil</label><input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>Selecione uma imagem JPG, PNG ou WebP de até 5 MB. A foto ficará visível na plataforma.</small>${profile.avatar_path ? '<label class="opcao-remover-foto"><input type="checkbox" name="remove_avatar"> Remover foto atual</label>' : ""}</div></div>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
 }
 
 function bookingDialog(serviceList, barberId, barberName = "") {
@@ -558,6 +578,24 @@ document.addEventListener("click", async event => {
             if (error) throw error;
             commentsByPost[id] = data || [];
             renderFeed();
+        } else if (action === "post-comments") {
+            if (commentsByPost[id] !== undefined) {
+                delete commentsByPost[id];
+            } else {
+                const { data, error } = await supabase.rpc("get_post_comments", { p_post_id: id });
+                if (error) throw error;
+                commentsByPost[id] = data || [];
+            }
+            renderPosts();
+        } else if (action === "post-likes") {
+            if (likesByPost[id] !== undefined) {
+                delete likesByPost[id];
+            } else {
+                const { data, error } = await supabase.rpc("get_post_likes", { p_post_id: id });
+                if (error) throw error;
+                likesByPost[id] = data || [];
+            }
+            renderPosts();
         } else if (action === "book") {
             const service = services.find(item => item.id === id);
             if (service) bookingDialog(services, service.barber_id, service.barber?.shop_name || service.barber?.full_name);
@@ -607,19 +645,64 @@ document.addEventListener("submit", async event => {
         event.preventDefault();
         const values = new FormData(form);
         const updates = { full_name: String(values.get("full_name")).trim() };
+        const avatarFile = values.get("avatar");
+        const removeAvatar = values.get("remove_avatar") === "on";
+        const submit = form.querySelector('button[type="submit"]');
         if (isBarber()) {
             updates.shop_name = String(values.get("shop_name")).trim();
             updates.bio = String(values.get("bio") || "").trim();
         }
+        submit.disabled = true;
         try {
+            if (avatarFile.size > 5 * 1024 * 1024) {
+                throw new Error("A foto deve ter no máximo 5 MB.");
+            }
+            const extensions = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+            const extension = extensions[avatarFile.type];
+            if (avatarFile.size && !extension) {
+                throw new Error("Escolha uma imagem JPG, PNG ou WebP.");
+            }
+            if (avatarFile.size && removeAvatar) {
+                throw new Error("Escolha uma nova foto ou marque a opção para remover a foto atual.");
+            }
+
+            const previousAvatarPath = profile.avatar_path;
+            let uploadedAvatarPath = null;
+            if (avatarFile.size) {
+                uploadedAvatarPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+                const { error: uploadError } = await supabase.storage
+                    .from("profile-photos")
+                    .upload(uploadedAvatarPath, avatarFile, { contentType: avatarFile.type, cacheControl: "0" });
+                if (uploadError) throw uploadError;
+                updates.avatar_path = uploadedAvatarPath;
+            } else if (removeAvatar) {
+                updates.avatar_path = null;
+            }
+
             const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
-            if (error) throw error;
+            if (error) {
+                if (uploadedAvatarPath) {
+                    const { error: cleanupError } = await supabase.storage.from("profile-photos").remove([uploadedAvatarPath]);
+                    if (cleanupError) {
+                        throw new Error(`${error.message} A foto enviada também não pôde ser removida: ${cleanupError.message}`);
+                    }
+                }
+                throw error;
+            }
             profile = { ...profile, ...updates };
-            document.querySelector("#user-name").textContent = profile.full_name;
-            showNotice("Perfil atualizado.");
+            avatarVersion = Date.now();
+            let cleanupWarning = "";
+            if (previousAvatarPath && previousAvatarPath !== profile.avatar_path) {
+                const { error: cleanupError } = await supabase.storage.from("profile-photos").remove([previousAvatarPath]);
+                if (cleanupError) cleanupWarning = `Perfil atualizado, mas não foi possível remover a foto anterior: ${cleanupError.message}`;
+            }
+            updateProfileHeader();
+            showNotice(cleanupWarning || "Perfil atualizado.", Boolean(cleanupWarning));
             render();
         } catch (error) {
             showNotice(error.message || "Não foi possível atualizar o perfil.", true);
+        } finally {
+            submit.disabled = false;
         }
     }
 });
@@ -632,6 +715,12 @@ async function signOut() {
 
 document.querySelector("#sign-out").addEventListener("click", signOut);
 document.querySelector("#sign-out-top").addEventListener("click", signOut);
+
+document.addEventListener("error", event => {
+    if (event.target instanceof HTMLImageElement && event.target.classList.contains("imagem-perfil")) {
+        event.target.remove();
+    }
+}, true);
 
 dialog.addEventListener("click", event => {
     if (event.target === dialog) dialog.close();
@@ -648,13 +737,10 @@ async function start() {
         }
         user = session.user;
         const { data, error } = await supabase.from("profiles")
-            .select("id, role, full_name, shop_name, bio").eq("id", user.id).single();
+            .select("id, role, full_name, shop_name, bio, avatar_path").eq("id", user.id).single();
         if (error) throw error;
         profile = data;
-        document.querySelector("#user-name").textContent = profile.full_name;
-        document.querySelector("#business-name").textContent = profile.shop_name || (isBarber() ? "Minha barbearia" : "Cliente");
-        document.querySelector("#business-avatar").textContent = initials(profile.shop_name || profile.full_name);
-        document.querySelector("#greeting-name").textContent = profile.full_name.split(/\s+/)[0];
+        updateProfileHeader();
         document.querySelector("#today-date").textContent = new Intl.DateTimeFormat("pt-BR", {
             weekday: "long", day: "2-digit", month: "long", year: "numeric"
         }).format(new Date()).toLocaleUpperCase("pt-BR");

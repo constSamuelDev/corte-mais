@@ -12,8 +12,9 @@ Em um projeto novo, abra **SQL Editor** no painel do Supabase e execute as migra
 - `supabase/migrations/20261022000000_inventory_entry_dates.sql`
 - `supabase/migrations/20261028000000_financial_entry_updates.sql`
 - `supabase/migrations/20261028010000_post_engagement_and_profile_photos.sql`
+- `supabase/migrations/20261028020000_client_booking_avatars.sql`
 
-A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. A sexta habilita fotos de perfil no Storage e consultas de curtidas e comentarios nas postagens do barbeiro. Se as cinco primeiras migracoes ja foram aplicadas, execute somente a sexta; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
+A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. A sexta habilita fotos de perfil no Storage e consultas de curtidas e comentarios nas postagens do barbeiro. A setima inclui as fotos dos clientes nos dados de agendamento usados pelo painel. Se as seis primeiras migracoes ja foram aplicadas, execute somente a setima; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
 
 ## 2. Configurar a autenticacao
 

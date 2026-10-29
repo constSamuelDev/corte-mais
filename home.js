@@ -281,13 +281,18 @@ function renderClients() {
     bookings.forEach(booking => {
         const current = clients.get(booking.customer_id);
         if (!current || new Date(booking.starts_at) > new Date(current.lastBooking)) {
-            clients.set(booking.customer_id, { name: booking.customer_name, lastBooking: booking.starts_at, total: (current?.total || 0) + 1 });
+            clients.set(booking.customer_id, {
+                name: booking.customer_name,
+                avatarPath: booking.customer_avatar_path,
+                lastBooking: booking.starts_at,
+                total: (current?.total || 0) + 1
+            });
         } else {
             current.total += 1;
         }
     });
     const rows = [...clients.values()].sort((a, b) => new Date(b.lastBooking) - new Date(a.lastBooking));
-    const list = rows.length ? rows.map(item => `<article class="linha-cliente"><span class="avatar avatar-cliente">${safe(initials(item.name))}</span><div class="dados-cliente"><strong>${safe(item.name)}</strong><span>Último agendamento · ${safe(dateTime(item.lastBooking))}</span></div><span class="valor-cliente">${item.total} ${item.total === 1 ? "visita" : "visitas"}</span></article>`).join("") : '<p class="estado-vazio">Clientes com agendamentos aparecerão aqui.</p>';
+    const list = rows.length ? rows.map(item => `<article class="linha-cliente"><span class="avatar avatar-cliente">${avatarContents(item.avatarPath, item.name)}</span><div class="dados-cliente"><strong>${safe(item.name)}</strong><span>Último agendamento · ${safe(dateTime(item.lastBooking))}</span></div><span class="valor-cliente">${item.total} ${item.total === 1 ? "visita" : "visitas"}</span></article>`).join("") : '<p class="estado-vazio">Clientes com agendamentos aparecerão aqui.</p>';
     main.innerHTML = `${pageHeading("RELACIONAMENTO", "Clientes", "Acompanhe os clientes que já solicitaram horários na barbearia.")}<section class="painel-conteudo tabela-clientes"><div class="cabecalho-painel"><div><span class="sobretitulo">SUA COMUNIDADE</span><h2>${rows.length} clientes</h2></div></div><div class="lista-clientes lista-clientes-completa">${list}</div></section>`;
 }
 

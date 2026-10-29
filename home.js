@@ -140,7 +140,6 @@ async function openLocationPicker() {
     };
 
     const leaflet = await loadLeaflet();
-    const leaflet = await loadLeaflet();
     const center = selected
         ? [selected.latitude, selected.longitude]
         : [-14.235, -51.9253];

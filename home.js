@@ -83,13 +83,13 @@ function profileMigrationError(error) {
 function navigation() {
     const groups = isBarber()
         ? [
-            ["WORKSPACE", [["overview", "Visão geral", "◈"], ["bookings", "Agenda", "▦"], ["clients", "Clientes", "◎"], ["profile", "Meu perfil", "✦"]]],
-            ["GESTÃO", [["finance", "Financeiro", "↗"], ["inventory", "Estoque", "▤"], ["services", "Serviços", "▤"], ["posts", "Conteúdo", "▢"]]]
+            ["WORKSPACE", [["overview", "Visão geral"], ["bookings", "Agenda"], ["clients", "Clientes"], ["profile", "Meu perfil"]]],
+            ["GESTÃO", [["finance", "Financeiro"], ["inventory", "Estoque"], ["services", "Serviços"], ["posts", "Conteúdo"]]]
         ]
-        : [["COMUNIDADE", [["feed", "Feed", "◈"], ["bookings", "Meus agendamentos", "▦"], ["profile", "Meu perfil", "✦"]]]];
+        : [["COMUNIDADE", [["feed", "Feed"], ["bookings", "Meus agendamentos"], ["profile", "Meu perfil"]]]];
     nav.innerHTML = groups.map(([group, pages]) =>
-        `<div class="grupo-navegacao"><span class="titulo-navegacao">${group}</span>${pages.map(([id, label, icon]) =>
-            `<button class="link-navegacao ${view === id ? "ativo" : ""}" data-view="${id}" type="button" ${view === id ? 'aria-current="page"' : ""}><span class="icone-nav" aria-hidden="true">${icon}</span><span>${label}</span></button>`
+        `<div class="grupo-navegacao"><span class="titulo-navegacao">${group}</span>${pages.map(([id, label]) =>
+            `<button class="link-navegacao ${view === id ? "ativo" : ""}" data-view="${id}" type="button" ${view === id ? 'aria-current="page"' : ""}><span>${label}</span></button>`
         ).join("")}</div>`
     ).join("");
 }

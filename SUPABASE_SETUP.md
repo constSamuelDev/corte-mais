@@ -10,8 +10,9 @@ Em um projeto novo, abra **SQL Editor** no painel do Supabase e execute as migra
 - `supabase/migrations/20261021230000_financial_entries.sql`
 - `supabase/migrations/20261021233000_inventory_items.sql`
 - `supabase/migrations/20261022000000_inventory_entry_dates.sql`
+- `supabase/migrations/20261028000000_financial_entry_updates.sql`
 
-A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. Se o schema inicial e as duas migracoes de modulos ja foram aplicados, execute somente a quarta; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
+A primeira migracao cria os perfis, servicos, postagens, curtidas, comentarios, agendamentos, politicas RLS e funcoes usadas pelo site. A segunda adiciona lancamentos financeiros privados por barbeiro. A terceira adiciona o estoque por barbeiro e registra automaticamente no financeiro as compras e entradas com custo. A quarta atualiza as funcoes de estoque para receber a data local da compra e evitar divergencias de fuso horario. A quinta permite atualizar lancamentos financeiros, mantendo a protecao RLS por barbeiro. Se as quatro primeiras migracoes ja foram aplicadas, execute somente a quinta; nao reaplique migracoes anteriores. A conexao do repositorio ao GitHub nao executa as migracoes automaticamente.
 
 ## 2. Configurar a autenticacao
 

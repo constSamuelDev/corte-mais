@@ -267,9 +267,15 @@ function renderClients() {
 
 function renderFinance() {
     const totals = monthFinancialTotals();
-    const rows = financialEntries.length ? financialEntries.map(item => `<article class="linha-financeira"><span class="indicador-tipo ${item.type === "income" ? "entrada" : "saida"}" aria-hidden="true">${item.type === "income" ? "↙" : "↗"}</span><div class="dados-lancamento"><strong>${safe(item.description)}</strong><span>${safe(item.category)} · ${safe(formatDate(item.entry_date))}</span></div><strong class="valor-lancamento ${item.type === "income" ? "entrada" : "saida"}">${item.type === "income" ? "+" : "−"} ${money(item.amount)}</strong><button class="botao-remover" type="button" data-action="delete-entry" data-id="${safe(item.id)}" aria-label="Remover lançamento ${safe(item.description)}">×</button></article>`).join("") : '<p class="estado-vazio">Nenhuma movimentação registrada. Adicione entradas e despesas para acompanhar o resultado.</p>';
+    const rows = financialEntries.length ? financialEntries.map(item => `<article class="linha-financeira"><span class="indicador-tipo ${item.type === "income" ? "entrada" : "saida"}" aria-hidden="true">${item.type === "income" ? "↙" : "↗"}</span><div class="dados-lancamento"><strong>${safe(item.description)}</strong><span>${safe(item.category)} · ${safe(formatDate(item.entry_date))}</span></div><strong class="valor-lancamento ${item.type === "income" ? "entrada" : "saida"}">${item.type === "income" ? "+" : "−"} ${money(item.amount)}</strong><div class="acoes-lancamento"><button class="botao-editar-lancamento" type="button" data-action="edit-entry" data-id="${safe(item.id)}" aria-label="Editar lançamento ${safe(item.description)}">✎</button><button class="botao-remover" type="button" data-action="delete-entry" data-id="${safe(item.id)}" aria-label="Remover lançamento ${safe(item.description)}">×</button></div></article>`).join("") : '<p class="estado-vazio">Nenhuma movimentação registrada. Adicione entradas e despesas para acompanhar o resultado.</p>';
     const action = '<button class="botao-primario" type="button" data-action="new-entry"><span aria-hidden="true">+</span> Adicionar lançamento</button>';
     main.innerHTML = `${pageHeading("GESTÃO", "Financeiro", "Controle as entradas, saídas e o saldo da sua barbearia.", action)}<section class="grade-resumo-financeiro"><article><span>Entradas neste mês</span><strong class="texto-entrada">${money(totals.income)}</strong></article><article><span>Saídas neste mês</span><strong class="texto-saida">${money(totals.expense)}</strong></article><article><span>Saldo deste mês</span><strong>${money(totals.balance)}</strong></article></section><section class="painel-conteudo tabela-financeira"><div class="cabecalho-painel"><div><span class="sobretitulo">MOVIMENTAÇÕES</span><h2>${financialEntries.length} lançamentos</h2></div><span class="legenda-horario">MÊS ATUAL NO RESUMO</span></div><div class="lista-financeira">${rows}</div></section>`;
+}
+
+function financialEntryFields(entry = {}) {
+    const categories = ["Serviços", "Produtos", "Estoque", "Aluguel", "Contas", "Equipamentos", "Impostos", "Outros"];
+    if (entry.category && !categories.includes(entry.category)) categories.push(entry.category);
+    return `<div class="form-grid">${field("type", "Movimentação", "select", { required: true, value: entry.type || "income", options: [{ value: "income", label: "Entrada" }, { value: "expense", label: "Saída" }] })}${field("category", "Categoria", "select", { required: true, value: entry.category || "Serviços", options: categories.map(value => ({ value, label: value })) })}${field("description", "Descrição", "text", { required: true, max: 120, placeholder: "Ex.: Corte, aluguel, conta de luz", value: entry.description || "" })}${field("amount", "Valor (R$)", "number", { required: true, min: "0.01", step: "0.01", placeholder: "0,00", value: entry.amount === undefined ? "" : String(entry.amount) })}${field("entry_date", "Data", "date", { required: true, value: entry.entry_date || dateToday() })}</div>`;
 }
 
 function renderInventory() {
@@ -436,8 +442,7 @@ document.addEventListener("click", async event => {
             showNotice("Serviço excluído.");
             await loadView("services");
         } else if (action === "new-entry") {
-            const fields = `<div class="form-grid">${field("type", "Movimentação", "select", { required: true, options: [{ value: "income", label: "Entrada" }, { value: "expense", label: "Saída" }] })}${field("category", "Categoria", "select", { required: true, options: ["Serviços", "Produtos", "Estoque", "Aluguel", "Contas", "Equipamentos", "Impostos", "Outros"].map(value => ({ value, label: value })) })}${field("description", "Descrição", "text", { required: true, max: 120, placeholder: "Ex.: Corte, aluguel, conta de luz" })}${field("amount", "Valor (R$)", "number", { required: true, min: "0.01", step: "0.01", placeholder: "0,00" })}${field("entry_date", "Data", "date", { required: true, value: dateToday() })}</div>`;
-            openDialog("Novo lançamento", "FINANCEIRO", fields, "Salvar lançamento", async form => {
+            openDialog("Novo lançamento", "FINANCEIRO", financialEntryFields(), "Salvar lançamento", async form => {
                 const { error } = await supabase.from("financial_entries").insert({
                     barber_id: user.id,
                     type: String(form.get("type")),
@@ -448,6 +453,21 @@ document.addEventListener("click", async event => {
                 });
                 if (error) throw error;
                 showNotice("Lançamento financeiro salvo.");
+                await loadView("finance");
+            });
+        } else if (action === "edit-entry") {
+            const entry = financialEntries.find(item => item.id === id);
+            if (!entry) throw new Error("Este lançamento não está mais disponível para edição.");
+            openDialog("Editar lançamento", "FINANCEIRO", financialEntryFields(entry), "Salvar alterações", async form => {
+                const { error } = await supabase.from("financial_entries").update({
+                    type: String(form.get("type")),
+                    category: String(form.get("category")),
+                    description: String(form.get("description")).trim(),
+                    amount: Number(form.get("amount")),
+                    entry_date: String(form.get("entry_date"))
+                }).eq("id", entry.id).eq("barber_id", user.id);
+                if (error) throw error;
+                showNotice("Lançamento financeiro atualizado.");
                 await loadView("finance");
             });
         } else if (action === "new-inventory") {
@@ -510,10 +530,20 @@ document.addEventListener("click", async event => {
             showNotice("Item removido do estoque.");
             await loadView("inventory");
         } else if (action === "delete-entry") {
-            const { error } = await supabase.from("financial_entries").delete().eq("id", id).eq("barber_id", user.id);
-            if (error) throw error;
-            showNotice("Lançamento removido.");
-            await loadView("finance");
+            const entry = financialEntries.find(item => item.id === id);
+            if (!entry) throw new Error("Este lançamento não está mais disponível para exclusão.");
+            openDialog(
+                "Excluir lançamento?",
+                "CONFIRME A EXCLUSÃO",
+                `<p class="texto-confirmacao">Deseja realmente excluir <strong>${safe(entry.description)}</strong>? Esta ação não pode ser desfeita.</p>`,
+                "Excluir lançamento",
+                async () => {
+                    const { error } = await supabase.from("financial_entries").delete().eq("id", entry.id).eq("barber_id", user.id);
+                    if (error) throw error;
+                    showNotice("Lançamento removido.");
+                    await loadView("finance");
+                }
+            );
         } else if (action === "like") {
             const post = posts.find(item => item.id === id);
             if (!post) return;

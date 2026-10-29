@@ -73,6 +73,13 @@ function renderError(error) {
     main.innerHTML = `<div class="error-state"><strong>Não foi possível carregar esta página.</strong><p>${safe(error.message || "Verifique a conexão e a configuração do Supabase.")}</p><button class="button" data-action="reload" type="button">Tentar novamente</button></div>`;
 }
 
+function profileMigrationError(error) {
+    if (error.code === "42703" && /avatar_path/i.test(error.message || "")) {
+        return new Error("O banco Supabase ainda não foi atualizado para fotos de perfil. No SQL Editor do Supabase, execute a migração supabase/migrations/20261028010000_post_engagement_and_profile_photos.sql e tente novamente.");
+    }
+    return error;
+}
+
 function navigation() {
     const groups = isBarber()
         ? [
@@ -422,7 +429,10 @@ document.addEventListener("click", async event => {
     const { action, id } = actionButton.dataset;
     try {
         if (action === "close-dialog") dialog.close();
-        else if (action === "reload") await loadView(view);
+        else if (action === "reload") {
+            if (profile) await loadView(view);
+            else await start();
+        }
         else if (action === "new-post") {
             const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_url", "Link de imagem (opcional)", "url", { placeholder: "https://...", max: 2048, full: true })}`;
             openDialog("Nova postagem", "COMPARTILHE COM SEUS CLIENTES", fields, "Publicar", async form => {
@@ -754,7 +764,7 @@ async function start() {
         view = isBarber() ? "overview" : "feed";
         await loadView(view);
     } catch (error) {
-        renderError(error);
+        renderError(profileMigrationError(error));
     }
 }
 

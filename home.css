@@ -212,7 +212,7 @@
 .avatar-perfil-grande { width: 76px; height: 76px; }
 .opcao-remover-foto { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: #9c3e32 !important; }
 .opcao-remover-foto input { width: auto !important; min-height: 0 !important; }
-.localizacao-perfil { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0; padding: 15px; border: 1px solid var(--linha); border-radius: 7px; background: #faf9f5; }
+.localizacao-perfil { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 20px; padding: 17px; border: 1px solid #e8dfc7; border-left: 3px solid var(--amarelo); border-radius: 7px; background: #faf8f0; }
 .localizacao-perfil > div { display: grid; gap: 5px; }
 .localizacao-perfil > div > strong { font-size: 11px; }
 .localizacao-perfil p { margin: 0; color: #858178; font-size: 10px; line-height: 1.5; }

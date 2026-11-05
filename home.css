@@ -395,14 +395,14 @@
 
 .botao-remover {
     display: inline-grid;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     place-items: center;
     border: 0;
     border-radius: 50%;
     color: #918d84;
     background: transparent;
-    font-size: 18px;
+    font-size: 24px;
     cursor: pointer;
 }
 

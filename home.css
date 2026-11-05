@@ -395,8 +395,8 @@
 
 .painel-aplicativo button.botao-remover {
     display: inline-grid;
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     place-items: center;
     border: 0;
     border-radius: 50%;
@@ -406,7 +406,25 @@
     cursor: pointer;
 }
 
+.botao-remover svg { display: block; width: 32px; height: 32px; }
 .botao-remover:hover { color: #a44435; background: #f5e6df; }
+
+.dialogo-cliente .dialog-close {
+    display: inline-grid;
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #77736b;
+    background: transparent;
+    cursor: pointer;
+}
+
+.dialogo-cliente .dialog-close svg { display: block; width: 40px; height: 40px; }
+.dialogo-cliente .dialog-close:hover { color: #191919; background: #efede6; }
 
 .acoes-lancamento { display: flex; align-items: center; gap: 4px; }
 .botao-editar-lancamento {

@@ -427,7 +427,7 @@
 .dialogo-cliente .dialog-close:hover { color: #191919; background: #efede6; }
 
 .acoes-lancamento { display: flex; align-items: center; gap: 4px; }
-.botao-editar-lancamento {
+.painel-aplicativo .acoes-lancamento > button.botao-editar-lancamento {
     display: inline-grid;
     width: 56px;
     height: 56px;
@@ -439,8 +439,8 @@
     font-size: 15px;
     cursor: pointer;
 }
-.botao-editar-lancamento svg { display: block; width: 32px; height: 32px; }
-.botao-editar-lancamento:hover { color: #80640e; background: #f8efca; }
+.painel-aplicativo .acoes-lancamento > button.botao-editar-lancamento svg { display: block; width: 32px; height: 32px; }
+.painel-aplicativo .acoes-lancamento > button.botao-editar-lancamento:hover { color: #80640e; background: #f8efca; }
 
 .grade-resumo-financeiro {
     display: grid;

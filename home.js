@@ -247,12 +247,13 @@ function openDialog(title, eyebrow, fields, buttonText, onSubmit) {
 function field(name, label, type = "text", options = {}) {
     const id = `field-${name}`;
     const required = options.required ? "required" : "";
-    const value = options.value === undefined ? "" : `value="${safe(options.value)}"`;
+    const value = type === "file" || options.value === undefined ? "" : `value="${safe(options.value)}"`;
     const placeholder = options.placeholder ? `placeholder="${safe(options.placeholder)}"` : "";
     const min = options.min === undefined ? "" : `min="${safe(options.min)}"`;
     const max = options.max === undefined ? "" : `max="${safe(options.max)}"`;
     const maxLength = type === "text" && options.max !== undefined ? `maxlength="${safe(options.max)}"` : "";
     const step = options.step === undefined ? "" : `step="${safe(options.step)}"`;
+    const accept = options.accept ? `accept="${safe(options.accept)}"` : "";
     if (type === "textarea") {
         return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><textarea id="${id}" name="${safe(name)}" maxlength="${safe(options.maxLength || 2000)}" ${placeholder} ${required}>${safe(options.value || "")}</textarea></div>`;
     }
@@ -263,7 +264,7 @@ function field(name, label, type = "text", options = {}) {
         }).join("");
         return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><select id="${id}" name="${safe(name)}" ${required}>${choices}</select></div>`;
     }
-    return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><input id="${id}" name="${safe(name)}" type="${safe(type)}" ${value} ${placeholder} ${min} ${max} ${maxLength} ${step} ${required}></div>`;
+    return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><input id="${id}" name="${safe(name)}" type="${safe(type)}" ${value} ${placeholder} ${min} ${max} ${maxLength} ${step} ${accept} ${required}></div>`;
 }
 
 function render() {
@@ -584,14 +585,41 @@ document.addEventListener("click", async event => {
         }
         else if (action === "choose-location") await openLocationPicker();
         else if (action === "new-post") {
-            const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_url", "Link de imagem (opcional)", "url", { placeholder: "https://...", max: 2048, full: true })}`;
+            const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_file", "Foto do dispositivo (opcional)", "file", { accept: "image/jpeg,image/png,image/webp", full: true })}${field("image_url", "Ou link direto da imagem", "url", { placeholder: "https://...", max: 2048, full: true })}`;
             openDialog("Nova postagem", "COMPARTILHE COM SEUS CLIENTES", fields, "Publicar", async form => {
-                const imageUrl = String(form.get("image_url") || "").trim();
+                const imageFile = form.get("image_file");
+                const hasImageFile = imageFile && imageFile.size > 0;
+                let imageUrl = String(form.get("image_url") || "").trim();
+                if (hasImageFile && imageUrl) throw new Error("Escolha uma foto do dispositivo ou um link, não os dois.");
                 if (imageUrl && !usableImage(imageUrl)) throw new Error("Use um link de imagem HTTP ou HTTPS.");
+
+                let uploadedImagePath = null;
+                if (hasImageFile) {
+                    const extensions = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+                    const extension = extensions[imageFile.type];
+                    if (!extension) throw new Error("Escolha uma imagem JPG, PNG ou WebP.");
+                    if (imageFile.size > 5 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 5 MB.");
+
+                    uploadedImagePath = `${user.id}/posts/${crypto.randomUUID()}.${extension}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from("profile-photos")
+                        .upload(uploadedImagePath, imageFile, { contentType: imageFile.type, cacheControl: "0" });
+                    if (uploadError) throw uploadError;
+                    imageUrl = supabase.storage.from("profile-photos").getPublicUrl(uploadedImagePath).data.publicUrl;
+                }
+
                 const { error } = await supabase.from("posts").insert({
                     barber_id: user.id, body: String(form.get("body")).trim(), image_url: imageUrl || null
                 });
-                if (error) throw error;
+                if (error) {
+                    if (uploadedImagePath) {
+                        const { error: cleanupError } = await supabase.storage.from("profile-photos").remove([uploadedImagePath]);
+                        if (cleanupError) {
+                            throw new Error(`${error.message} A foto enviada também não pôde ser removida: ${cleanupError.message}`);
+                        }
+                    }
+                    throw error;
+                }
                 showNotice("Postagem publicada.");
                 await loadView("posts");
             });

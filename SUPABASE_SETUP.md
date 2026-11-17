@@ -58,4 +58,4 @@ Sirva a pasta por HTTP usando Live Server ou a hospedagem escolhida; abrir `inde
 - Agendamentos: o cliente solicita um horario a partir de um servico ativo no Feed; o barbeiro confirma ou recusa o pedido na Agenda, e o cliente pode cancelar.
 - Protecao RLS e bloqueio de dois agendamentos ativos que se sobreponham para o mesmo barbeiro.
 
-As imagens das postagens usam links HTTP/HTTPS nesta versao. O banco ainda nao define expediente, folgas ou antecedencia minima: qualquer horario futuro esta sujeito a disponibilidade e a regra de conflito. A migracao de fotos cria o bucket publico `profile-photos` e define as politicas de acesso ao Storage.
+As postagens aceitam fotos JPG, PNG ou WebP de ate 5 MB, enviadas ao bucket publico `profile-photos`, ou links HTTP/HTTPS diretos para imagens. O banco ainda nao define expediente, folgas ou antecedencia minima: qualquer horario futuro esta sujeito a disponibilidade e a regra de conflito. A migracao de fotos cria o bucket `profile-photos` e define as politicas de acesso ao Storage.

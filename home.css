@@ -198,6 +198,33 @@
 .cabecalho-postagem { display: flex; align-items: center; gap: 10px; }
 .avatar-postagem { width: 38px; height: 38px; }
 .avatar-comentario { width: 30px; height: 30px; }
+.botao-avatar-perfil { padding: 0; border: 0; cursor: pointer; }
+.link-perfil-barbeiro { display: grid; gap: 2px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.link-perfil-barbeiro .eyebrow { margin-bottom: 0; }
+.link-perfil-barbeiro strong { font-size: 13px; font-weight: 600; }
+.link-perfil-barbeiro:hover strong { text-decoration: underline; text-underline-offset: 2px; }
+.topo-perfil-barbeiro { padding: 24px; }
+.topo-perfil-barbeiro > .button { margin-bottom: 22px; }
+.identidade-perfil-barbeiro { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 24px; }
+.avatar-perfil-grande.avatar-perfil-barbeiro { width: 96px; height: 96px; }
+.dados-perfil-barbeiro { min-width: 0; }
+.dados-perfil-barbeiro h1 { margin: 0 0 4px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-size: clamp(26px, 3vw, 34px); font-weight: 600; line-height: 1.1; }
+.dados-perfil-barbeiro > strong { display: block; margin-bottom: 8px; color: #5f5b53; font-size: 12px; }
+.dados-perfil-barbeiro > p { margin: 0; color: #77746b; line-height: 1.5; }
+.estatisticas-perfil-barbeiro { display: flex; gap: 20px; padding-left: 22px; border-left: 1px solid var(--linha); }
+.estatisticas-perfil-barbeiro > div { display: grid; gap: 4px; text-align: center; }
+.estatisticas-perfil-barbeiro strong { font-size: 17px; }
+.estatisticas-perfil-barbeiro span { color: #77746b; font-size: 10px; }
+.secao-perfil-barbeiro { margin-top: 24px; }
+.servicos-perfil-barbeiro { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.servico-perfil-barbeiro { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; margin: 0; }
+.servico-perfil-barbeiro .price { display: block; margin-top: 7px; }
+.grade-publicacoes-barbeiro { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.publicacao-perfil-barbeiro { position: relative; overflow: hidden; aspect-ratio: 1; border: 1px solid var(--linha); background: #f3edda; }
+.publicacao-perfil-barbeiro img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.legenda-publicacao-barbeiro { position: absolute; right: 0; bottom: 0; left: 0; max-height: 70%; overflow: hidden; padding: 12px; color: #fff; background: linear-gradient(transparent, rgba(0, 0, 0, .78)); font-size: 10px; line-height: 1.45; opacity: 0; transition: opacity 150ms ease; }
+.publicacao-perfil-barbeiro:hover .legenda-publicacao-barbeiro { opacity: 1; }
+.texto-publicacao-barbeiro { height: 100%; overflow: auto; margin: 0; padding: 14px; color: #514a3c; font-size: 11px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .detalhes-interacao, .lista-curtidas { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #efede7; }
 .detalhes-interacao .comment-item { align-items: center; justify-content: flex-start; margin: 0; }
 .detalhes-interacao .comment-item > div { display: grid; min-width: 0; gap: 3px; }
@@ -636,6 +663,13 @@
     .cartao-perfil { align-items: flex-start; gap: 15px; padding: 20px 16px; }
     .avatar-perfil-grande { width: 62px; height: 62px; }
     .cartao-perfil h2 { font-size: 18px; }
+    .topo-perfil-barbeiro { padding: 18px 14px; }
+    .topo-perfil-barbeiro > .button { margin-bottom: 16px; }
+    .identidade-perfil-barbeiro { grid-template-columns: 64px minmax(0, 1fr); gap: 14px; }
+    .avatar-perfil-grande.avatar-perfil-barbeiro { width: 64px; height: 64px; }
+    .estatisticas-perfil-barbeiro { grid-column: 1 / -1; justify-content: flex-start; gap: 24px; padding: 12px 0 0; border-top: 1px solid var(--linha); border-left: 0; }
+    .estatisticas-perfil-barbeiro > div { text-align: left; }
+    .grade-publicacoes-barbeiro { gap: 6px; }
     .campo-foto-perfil { align-items: flex-start; gap: 12px; }
     .avatar-perfil-grande { width: 60px; height: 60px; }
     .localizacao-perfil { align-items: flex-start; flex-direction: column; }

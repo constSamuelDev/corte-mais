@@ -9,6 +9,10 @@ let user;
 let profile;
 let view = "";
 let viewLoadId = 0;
+let selectedBarberId = "";
+let barberProfile = null;
+let barberProfileServices = [];
+let barberProfilePosts = [];
 let posts = [];
 let services = [];
 let bookings = [];
@@ -216,6 +220,7 @@ function profileMigrationError(error) {
 }
 
 function navigation() {
+    const activeView = view === "barber-profile" ? "feed" : view;
     const groups = isBarber()
         ? [
             ["WORKSPACE", [["overview", "Visão geral"], ["bookings", "Agenda"], ["clients", "Clientes"], ["profile", "Meu perfil"]]],
@@ -224,13 +229,18 @@ function navigation() {
         : [["COMUNIDADE", [["feed", "Feed"], ["bookings", "Meus agendamentos"], ["profile", "Meu perfil"]]]];
     nav.innerHTML = groups.map(([group, pages]) =>
         `<div class="grupo-navegacao"><span class="titulo-navegacao">${group}</span>${pages.map(([id, label]) =>
-            `<button class="link-navegacao ${view === id ? "ativo" : ""}" data-view="${id}" type="button" ${view === id ? 'aria-current="page"' : ""}><span>${label}</span></button>`
+            `<button class="link-navegacao ${activeView === id ? "ativo" : ""}" data-view="${id}" type="button" ${activeView === id ? 'aria-current="page"' : ""}><span>${label}</span></button>`
         ).join("")}</div>`
     ).join("");
 }
 
 function pageHeading(eyebrow, title, description, action = "") {
     return `<header class="cabecalho-pagina"><div><span class="sobretitulo">${safe(eyebrow)}</span><h1>${safe(title)}</h1><p>${safe(description)}</p></div>${action}</header>`;
+}
+
+function barberProfileButton(barberId, barberName, shopName) {
+    const displayShop = shopName || barberName || "Barbearia";
+    return `<button class="link-perfil-barbeiro" type="button" data-action="barber-profile" data-id="${safe(barberId)}" aria-label="Ver perfil de ${safe(displayShop)}"><span class="eyebrow">${safe(displayShop)}</span><strong>${safe(barberName || "Ver perfil")}</strong></button>`;
 }
 
 function openDialog(title, eyebrow, fields, buttonText, onSubmit) {
@@ -285,6 +295,7 @@ function render() {
     navigation();
     if (view === "overview") renderOverview();
     else if (view === "feed") renderFeed();
+    else if (view === "barber-profile") renderBarberProfile();
     else if (view === "posts") renderPosts();
     else if (view === "services") renderServices();
     else if (view === "bookings") renderBookings();
@@ -308,6 +319,7 @@ async function loadView(nextView) {
             await Promise.all([loadBookings(), loadServices(true), loadFinancialEntries(), loadInventoryItems()]);
         }
         if (targetView === "feed") await loadFeed();
+        if (targetView === "barber-profile") await loadBarberProfile(selectedBarberId, requestId);
         if (targetView === "posts") await loadPosts();
         if (targetView === "services") await loadServices(true);
         if (targetView === "bookings") {
@@ -365,6 +377,40 @@ async function loadPosts() {
     const { data, error } = await supabase.rpc("get_public_posts");
     if (error) throw error;
     posts = (data || []).filter(item => item.barber_id === user.id);
+}
+
+async function loadBarberProfile(barberId, requestId) {
+    if (!barberId) throw new Error("Não foi possível identificar este barbeiro.");
+    const [
+        { data: barber, error: barberError },
+        { data: serviceRows, error: serviceError },
+        { data: postRows, error: postError }
+    ] = await Promise.all([
+        supabase.from("profiles")
+            .select("id, role, full_name, shop_name, bio, avatar_path, location_latitude, location_longitude")
+            .eq("id", barberId)
+            .eq("role", "barber")
+            .maybeSingle(),
+        supabase.from("services")
+            .select("id, barber_id, name, description, price, duration_minutes, active")
+            .eq("barber_id", barberId)
+            .eq("active", true)
+            .order("name"),
+        supabase.from("posts")
+            .select("id, barber_id, body, image_url, created_at")
+            .eq("barber_id", barberId)
+            .order("created_at", { ascending: false })
+            .limit(100)
+    ]);
+    if (barberError) throw barberError;
+    if (serviceError) throw serviceError;
+    if (postError) throw postError;
+    if (!barber) throw new Error("Este perfil de barbeiro não está disponível.");
+    if (requestId !== viewLoadId || selectedBarberId !== barberId) return;
+
+    barberProfile = barber;
+    barberProfileServices = serviceRows || [];
+    barberProfilePosts = postRows || [];
 }
 
 async function loadServices(ownOnly) {
@@ -507,13 +553,30 @@ function renderInventory() {
 }
 
 function renderFeed() {
-    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card"><span class="eyebrow">${safe(service.barber?.shop_name || service.barber?.full_name || "Barbearia")}</span><h3>${safe(service.name)}</h3>${mapsLink(service.barber?.location_latitude, service.barber?.location_longitude)}<p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Solicitar horário</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Quando uma barbearia cadastrar um serviço, você poderá solicitar um horário por aqui.</p>';
+    const serviceCards = services.length ? `<section><div class="card-header"><div><span class="eyebrow">ENCONTRE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div><div class="grid-cards">${services.map(service => `<article class="card">${barberProfileButton(service.barber_id, service.barber?.full_name, service.barber?.shop_name)}<h3>${safe(service.name)}</h3>${mapsLink(service.barber?.location_latitude, service.barber?.location_longitude)}<p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><p class="muted">${safe(service.duration_minutes)} min</p><strong class="price">${money(service.price)}</strong><div class="feed-actions"><button class="button button-primary" type="button" data-action="book" data-id="${safe(service.id)}">Solicitar horário</button></div></article>`).join("")}</div></section>` : '<p class="empty-state">Ainda não há serviços publicados. Quando uma barbearia cadastrar um serviço, você poderá solicitar um horário por aqui.</p>';
     const postCards = posts.length ? posts.map(post => {
         const image = usableImage(post.image_url);
         const comments = commentsByPost[post.id];
-        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, post.barber_name)}</span><div><span class="eyebrow">${safe(post.shop_name || "Barbearia")}</span><h3>${safe(post.barber_name)}</h3>${mapsLink(post.location_latitude, post.location_longitude)}</div></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
+        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><button class="avatar avatar-postagem botao-avatar-perfil" type="button" data-action="barber-profile" data-id="${safe(post.barber_id)}" aria-label="Ver perfil de ${safe(post.barber_name)}">${avatarContents(post.barber_avatar_path, post.barber_name)}</button><div>${barberProfileButton(post.barber_id, post.barber_name, post.shop_name)}${mapsLink(post.location_latitude, post.location_longitude)}</div></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
     }).join("") : '<p class="empty-state">Os barbeiros ainda não publicaram novidades.</p>';
     main.innerHTML = `${pageHeading("COMUNIDADE", "Feed dos barbeiros", "Acompanhe as novidades, curta, comente e agende seu próximo atendimento.")}<section><div class="card-header"><div><span class="eyebrow">NOVIDADES</span><h2>Postagens</h2></div></div>${postCards}</section><section>${serviceCards}</section>`;
+}
+
+function renderBarberProfile() {
+    if (!barberProfile) throw new Error("Os dados deste perfil ainda não foram carregados.");
+    const serviceCards = barberProfileServices.length
+        ? `<div class="servicos-perfil-barbeiro">${barberProfileServices.map(service => `<article class="card servico-perfil-barbeiro"><div><h3>${safe(service.name)}</h3><p class="muted">${safe(service.description || "Serviço disponível para agendamento.")}</p><span class="muted">${safe(service.duration_minutes)} min</span><strong class="price">${money(service.price)}</strong></div><button class="button button-primary" type="button" data-action="book-profile-service" data-id="${safe(service.id)}">Agendar</button></article>`).join("")}</div>`
+        : '<p class="empty-state">Este barbeiro ainda não publicou serviços para agendamento.</p>';
+    const postCards = barberProfilePosts.length
+        ? `<div class="grade-publicacoes-barbeiro">${barberProfilePosts.map(post => {
+            const image = usableImage(post.image_url);
+            return `<article class="publicacao-perfil-barbeiro">${image
+                ? `<img src="${safe(image)}" alt="Publicação de ${safe(barberProfile.full_name)}: ${safe(post.body)}" loading="lazy"><span class="legenda-publicacao-barbeiro">${safe(post.body)}</span>`
+                : `<p class="texto-publicacao-barbeiro">${safe(post.body)}</p>`}</article>`;
+        }).join("")}</div>`
+        : '<p class="empty-state">Este barbeiro ainda não publicou novidades.</p>';
+
+    main.innerHTML = `<section class="card topo-perfil-barbeiro"><button class="button" type="button" data-view="feed">Voltar ao Feed</button><div class="identidade-perfil-barbeiro"><span class="avatar avatar-perfil-grande avatar-perfil-barbeiro">${avatarContents(barberProfile.avatar_path, barberProfile.full_name)}</span><div class="dados-perfil-barbeiro"><span class="eyebrow">PERFIL DO BARBEIRO</span><h1>${safe(barberProfile.full_name)}</h1><strong>${safe(barberProfile.shop_name || "Barbearia")}</strong><p>${safe(barberProfile.bio || "Conheça os serviços e trabalhos desta barbearia.")}</p>${mapsLink(barberProfile.location_latitude, barberProfile.location_longitude)}</div><div class="estatisticas-perfil-barbeiro"><div><strong>${barberProfileServices.length}</strong><span>serviços</span></div><div><strong>${barberProfilePosts.length}</strong><span>publicações</span></div></div></div></section><section class="secao-perfil-barbeiro"><div class="card-header"><div><span class="eyebrow">AGENDE SEU PRÓXIMO CORTE</span><h2>Serviços</h2></div></div>${serviceCards}</section><section class="secao-perfil-barbeiro"><div class="card-header"><div><span class="eyebrow">TRABALHOS E NOVIDADES</span><h2>Publicações</h2></div></div>${postCards}</section>`;
 }
 
 function renderPosts() {
@@ -566,9 +629,9 @@ function renderProfile() {
     main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span>${locationFields}<div class="campo-foto-perfil"><span class="avatar avatar-perfil-grande">${avatarContents(profile.avatar_path, profile.full_name)}</span><div class="field"><label for="profile-avatar">Foto de perfil</label><input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>Selecione uma imagem JPG, PNG ou WebP de até 5 MB. A foto ficará visível na plataforma.</small>${profile.avatar_path ? '<label class="opcao-remover-foto"><input type="checkbox" name="remove_avatar"> Remover foto atual</label>' : ""}</div></div>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
 }
 
-function bookingDialog(serviceList, barberId, barberName = "") {
+function bookingDialog(serviceList, barberId, barberName = "", selectedServiceId = "") {
     const options = serviceList.filter(item => item.barber_id === barberId && item.active)
-        .map(item => `<option value="${safe(item.id)}">${safe(item.name)} · ${money(item.price)} · ${safe(item.duration_minutes)} min</option>`).join("");
+        .map(item => `<option value="${safe(item.id)}" ${item.id === selectedServiceId ? "selected" : ""}>${safe(item.name)} · ${money(item.price)} · ${safe(item.duration_minutes)} min</option>`).join("");
     if (!options) {
         showNotice("Este barbeiro ainda não possui serviços disponíveis para agendamento.", true);
         return;
@@ -614,6 +677,10 @@ document.addEventListener("click", async event => {
         else if (action === "reload") {
             if (profile) await loadView(view);
             else await start();
+        }
+        else if (action === "barber-profile") {
+            selectedBarberId = id;
+            await loadView("barber-profile");
         }
         else if (action === "choose-location") await openLocationPicker();
         else if (action === "new-post") {
@@ -822,6 +889,11 @@ document.addEventListener("click", async event => {
         } else if (action === "book") {
             const service = services.find(item => item.id === id);
             if (service) bookingDialog(services, service.barber_id, service.barber?.shop_name || service.barber?.full_name);
+        } else if (action === "book-profile-service") {
+            const service = barberProfileServices.find(item => item.id === id);
+            if (service && barberProfile) {
+                bookingDialog(barberProfileServices, service.barber_id, barberProfile.shop_name || barberProfile.full_name, service.id);
+            }
         } else if (action === "book-barber") {
             bookingDialog(services, id, posts.find(item => item.barber_id === id)?.barber_name);
         } else if (action === "cancel-booking") {

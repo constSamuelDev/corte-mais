@@ -21,6 +21,19 @@ let inventoryItems = [];
 let commentsByPost = {};
 let likesByPost = {};
 let avatarVersion = Date.now();
+const maxImageSize = 20 * 1024 * 1024;
+const imageAccept = ".jpg,.jpeg,image/jpeg,image/jpg,image/pjpeg,.png,image/png,.webp,image/webp,.gif,image/gif,.avif,image/avif,.bmp,image/bmp";
+const imageFormats = {
+    "image/jpeg": { extension: "jpg", contentType: "image/jpeg" },
+    "image/jpg": { extension: "jpg", contentType: "image/jpeg" },
+    "image/pjpeg": { extension: "jpg", contentType: "image/jpeg" },
+    "image/png": { extension: "png", contentType: "image/png" },
+    "image/webp": { extension: "webp", contentType: "image/webp" },
+    "image/gif": { extension: "gif", contentType: "image/gif" },
+    "image/avif": { extension: "avif", contentType: "image/avif" },
+    "image/bmp": { extension: "bmp", contentType: "image/bmp" },
+    "image/x-ms-bmp": { extension: "bmp", contentType: "image/bmp" }
+};
 
 const isBarber = () => {
     if (!profile) throw new Error("O perfil da conta ainda não foi carregado. Recarregue a página.");
@@ -56,6 +69,12 @@ const avatarContents = (path, name) => {
     const { data } = supabase.storage.from("profile-photos").getPublicUrl(path);
     return `${initialsMarkup}<img class="imagem-perfil" src="${safe(`${data.publicUrl}?v=${avatarVersion}`)}" alt="" aria-hidden="true">`;
 };
+function imageUploadDetails(file) {
+    const format = imageFormats[String(file.type || "").toLowerCase()];
+    if (!format) throw new Error("Escolha uma imagem JPG/JPEG, PNG, WebP, GIF, AVIF ou BMP.");
+    if (file.size > maxImageSize) throw new Error("A imagem deve ter no máximo 20 MB.");
+    return format;
+}
 const mapsLink = (latitude, longitude) => {
     if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) return "";
     const lat = Number(latitude);
@@ -279,7 +298,7 @@ function field(name, label, type = "text", options = {}) {
         return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><textarea id="${id}" name="${safe(name)}" maxlength="${safe(options.maxLength || 2000)}" ${placeholder} ${required}>${safe(options.value || "")}</textarea></div>`;
     }
     if (type === "file") {
-        return `<div class="field field-upload ${options.full ? "field-full" : ""}"><span class="rotulo-campo">${safe(label)}</span><label class="seletor-foto" for="${id}"><span class="icone-galeria" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg></span><span class="seletor-foto-texto"><strong>Escolher uma foto</strong><small>JPG, PNG ou WebP · até 5 MB</small></span><span class="seletor-foto-nome" data-file-name>Nenhuma foto selecionada</span><input class="input-foto" id="${id}" name="${safe(name)}" type="file" aria-label="${safe(label)}" ${accept} ${required}></label></div>`;
+        return `<div class="field field-upload ${options.full ? "field-full" : ""}"><span class="rotulo-campo">${safe(label)}</span><label class="seletor-foto" for="${id}"><span class="icone-galeria" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg></span><span class="seletor-foto-texto"><strong>Escolher uma foto</strong><small>JPG/JPEG, PNG, WebP, GIF, AVIF ou BMP · até 20 MB</small></span><span class="seletor-foto-nome" data-file-name>Nenhuma foto selecionada</span><input class="input-foto" id="${id}" name="${safe(name)}" type="file" aria-label="${safe(label)}" ${accept} ${required}></label></div>`;
     }
     if (type === "select") {
         const choices = (options.options || []).map(option => {
@@ -626,7 +645,7 @@ function renderProfile() {
     const locationFields = isBarber()
         ? `<section class="localizacao-perfil"><div><strong>Localização da barbearia</strong><p id="location-summary">${profile.location_latitude !== null && profile.location_latitude !== undefined && profile.location_longitude !== null && profile.location_longitude !== undefined ? "Localização salva e visível aos clientes." : "Adicione o ponto da barbearia para que os clientes possam encontrá-la."}</p>${mapsLink(profile.location_latitude, profile.location_longitude)}</div><button class="botao-secundario" type="button" data-action="choose-location">Escolher no mapa</button><input type="hidden" name="location_latitude" value="${safe(profile.location_latitude ?? "")}"><input type="hidden" name="location_longitude" value="${safe(profile.location_longitude ?? "")}"></section>`
         : "";
-    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span>${locationFields}<div class="campo-foto-perfil"><span class="avatar avatar-perfil-grande">${avatarContents(profile.avatar_path, profile.full_name)}</span><div class="field"><label for="profile-avatar">Foto de perfil</label><input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"><small>Selecione uma imagem JPG, PNG ou WebP de até 5 MB. A foto ficará visível na plataforma.</small>${profile.avatar_path ? '<label class="opcao-remover-foto"><input type="checkbox" name="remove_avatar"> Remover foto atual</label>' : ""}</div></div>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
+    main.innerHTML = `${pageHeading("SUA CONTA", "Meu perfil", "Atualize as informações que aparecem na plataforma.")}<form class="card" id="profile-form"><span class="eyebrow">${role}</span>${locationFields}<div class="campo-foto-perfil"><span class="avatar avatar-perfil-grande">${avatarContents(profile.avatar_path, profile.full_name)}</span><div class="field"><label for="profile-avatar">Foto de perfil</label><input id="profile-avatar" name="avatar" type="file" accept="${imageAccept}"><small>JPG/JPEG, PNG, WebP, GIF, AVIF ou BMP de até 20 MB. A foto ficará visível na plataforma.</small>${profile.avatar_path ? '<label class="opcao-remover-foto"><input type="checkbox" name="remove_avatar"> Remover foto atual</label>' : ""}</div></div>${field("full_name", "Nome", "text", { value: profile.full_name, required: true, max: 100 })}${isBarber() ? field("shop_name", "Nome da barbearia", "text", { value: profile.shop_name, required: true, max: 100 }) + field("bio", "Sobre", "textarea", { value: profile.bio, maxLength: 500, full: true }) : ""}<div class="field"><label>E-mail da conta</label><input type="email" value="${safe(user.email)}" disabled></div><button class="button button-primary" type="submit">Salvar perfil</button></form>`;
 }
 
 function bookingDialog(serviceList, barberId, barberName = "", selectedServiceId = "") {
@@ -684,7 +703,7 @@ document.addEventListener("click", async event => {
         }
         else if (action === "choose-location") await openLocationPicker();
         else if (action === "new-post") {
-            const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_file", "Foto do dispositivo (opcional)", "file", { accept: "image/jpeg,image/png,image/webp", full: true })}${field("image_url", "Ou link direto da imagem", "url", { placeholder: "https://...", max: 2048, full: true })}`;
+            const fields = `${field("body", "Texto da postagem", "textarea", { required: true, maxLength: 2000, full: true })}${field("image_file", "Foto do dispositivo (opcional)", "file", { accept: imageAccept, full: true })}${field("image_url", "Ou link direto da imagem", "url", { placeholder: "https://...", max: 2048, full: true })}`;
             openDialog("Nova postagem", "COMPARTILHE COM SEUS CLIENTES", fields, "Publicar", async form => {
                 const imageFile = form.get("image_file");
                 const hasImageFile = imageFile && imageFile.size > 0;
@@ -694,15 +713,11 @@ document.addEventListener("click", async event => {
 
                 let uploadedImagePath = null;
                 if (hasImageFile) {
-                    const extensions = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-                    const extension = extensions[imageFile.type];
-                    if (!extension) throw new Error("Escolha uma imagem JPG, PNG ou WebP.");
-                    if (imageFile.size > 5 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 5 MB.");
-
-                    uploadedImagePath = `${user.id}/posts/${crypto.randomUUID()}.${extension}`;
+                    const imageDetails = imageUploadDetails(imageFile);
+                    uploadedImagePath = `${user.id}/posts/${crypto.randomUUID()}.${imageDetails.extension}`;
                     const { error: uploadError } = await supabase.storage
                         .from("profile-photos")
-                        .upload(uploadedImagePath, imageFile, { contentType: imageFile.type, cacheControl: "0" });
+                        .upload(uploadedImagePath, imageFile, { contentType: imageDetails.contentType, cacheControl: "0" });
                     if (uploadError) throw uploadError;
                     imageUrl = supabase.storage.from("profile-photos").getPublicUrl(uploadedImagePath).data.publicUrl;
                 }
@@ -973,14 +988,7 @@ document.addEventListener("submit", async event => {
         }
         setButtonBusy(submit, true);
         try {
-            if (avatarFile.size > 5 * 1024 * 1024) {
-                throw new Error("A foto deve ter no máximo 5 MB.");
-            }
-            const extensions = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-            const extension = extensions[avatarFile.type];
-            if (avatarFile.size && !extension) {
-                throw new Error("Escolha uma imagem JPG, PNG ou WebP.");
-            }
+            const imageDetails = avatarFile.size ? imageUploadDetails(avatarFile) : null;
             if (avatarFile.size && removeAvatar) {
                 throw new Error("Escolha uma nova foto ou marque a opção para remover a foto atual.");
             }
@@ -988,10 +996,10 @@ document.addEventListener("submit", async event => {
             const previousAvatarPath = profile.avatar_path;
             let uploadedAvatarPath = null;
             if (avatarFile.size) {
-                uploadedAvatarPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+                uploadedAvatarPath = `${user.id}/${crypto.randomUUID()}.${imageDetails.extension}`;
                 const { error: uploadError } = await supabase.storage
                     .from("profile-photos")
-                    .upload(uploadedAvatarPath, avatarFile, { contentType: avatarFile.type, cacheControl: "0" });
+                    .upload(uploadedAvatarPath, avatarFile, { contentType: imageDetails.contentType, cacheControl: "0" });
                 if (uploadError) throw uploadError;
                 updates.avatar_path = uploadedAvatarPath;
             } else if (removeAvatar) {

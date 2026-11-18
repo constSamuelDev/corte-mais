@@ -46,6 +46,30 @@ const money = value => Number(value || 0).toLocaleString("pt-BR", { style: "curr
 const dateTime = value => new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "medium", timeStyle: "short"
 }).format(new Date(value));
+const relativePostTime = value => {
+    const date = new Date(value);
+    const elapsed = Date.now() - date.getTime();
+    if (!Number.isFinite(date.getTime()) || elapsed < 0) return dateTime(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date >= today && elapsed < 60_000) return "agora";
+    if (date >= today && elapsed < 3_600_000) {
+        const minutes = Math.floor(elapsed / 60_000);
+        return `há ${minutes} ${minutes === 1 ? "minuto" : "minutos"}`;
+    }
+    if (date >= today && elapsed < 86_400_000) {
+        const hours = Math.floor(elapsed / 3_600_000);
+        return `há ${hours} ${hours === 1 ? "hora" : "horas"}`;
+    }
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date >= yesterday && date < today) {
+        return `ontem às ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date)}`;
+    }
+    const days = Math.floor(elapsed / 86_400_000);
+    if (days < 7) return `há ${days} ${days === 1 ? "dia" : "dias"}`;
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(date);
+};
 const dateToday = () => {
     const now = new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -240,17 +264,18 @@ function profileMigrationError(error) {
 
 function navigation() {
     const activeView = view === "barber-profile" ? "feed" : view;
+    nav.classList.toggle("navegacao-barbeiro", isBarber());
     const groups = isBarber()
         ? [
             ["WORKSPACE", [["overview", "Visão geral"], ["bookings", "Agenda"], ["clients", "Clientes"], ["profile", "Meu perfil"]]],
             ["GESTÃO", [["finance", "Financeiro"], ["inventory", "Estoque"], ["services", "Serviços"], ["posts", "Conteúdo"]]]
         ]
-        : [["COMUNIDADE", [["feed", "Feed"], ["bookings", "Meus agendamentos"], ["profile", "Meu perfil"]]]];
+        : [["MENU", [["feed", "Feed"], ["bookings", "Meus agendamentos"]]], ["PERFIL", [["profile", "Meu perfil"]]]];
     nav.innerHTML = groups.map(([group, pages]) =>
         `<div class="grupo-navegacao"><span class="titulo-navegacao">${group}</span>${pages.map(([id, label]) =>
             `<button class="link-navegacao ${activeView === id ? "ativo" : ""}" data-view="${id}" type="button" ${activeView === id ? 'aria-current="page"' : ""}><span>${label}</span></button>`
         ).join("")}</div>`
-    ).join("");
+    ).join("") + '<button class="link-navegacao link-sair-mobile" data-action="sign-out" type="button"><span>Sair da conta</span></button>';
 }
 
 function pageHeading(eyebrow, title, description, action = "") {
@@ -312,6 +337,7 @@ function field(name, label, type = "text", options = {}) {
 
 function render() {
     navigation();
+    main.classList.toggle("pagina-feed", view === "feed");
     if (view === "overview") renderOverview();
     else if (view === "feed") renderFeed();
     else if (view === "barber-profile") renderBarberProfile();
@@ -576,7 +602,11 @@ function renderFeed() {
     const postCards = posts.length ? posts.map(post => {
         const image = usableImage(post.image_url);
         const comments = commentsByPost[post.id];
-        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><button class="avatar avatar-postagem botao-avatar-perfil" type="button" data-action="barber-profile" data-id="${safe(post.barber_id)}" aria-label="Ver perfil de ${safe(post.barber_name)}">${avatarContents(post.barber_avatar_path, post.barber_name)}</button><div>${barberProfileButton(post.barber_id, post.barber_name, post.shop_name)}${mapsLink(post.location_latitude, post.location_longitude)}</div></div><time class="muted">${dateTime(post.created_at)}</time></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem publicada por ${safe(post.barber_name)}" loading="lazy">` : ""}<div class="feed-actions"><button class="button" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
+        const shopName = post.shop_name || post.barber_name || "Barbearia";
+        const createdAt = new Date(post.created_at);
+        const timeLabel = relativePostTime(post.created_at);
+        const datetimeValue = Number.isFinite(createdAt.getTime()) ? createdAt.toISOString() : "";
+        return `<article class="card feed-card"><header class="feed-post-header"><button class="avatar avatar-postagem botao-avatar-perfil" type="button" data-action="barber-profile" data-id="${safe(post.barber_id)}" aria-label="Ver perfil de ${safe(shopName)}">${avatarContents(post.barber_avatar_path, post.barber_name)}</button><div class="feed-post-identity"><button class="feed-shop-link" type="button" data-action="barber-profile" data-id="${safe(post.barber_id)}">${safe(shopName)}</button><div class="feed-post-byline"><span>${safe(post.barber_name || "Barbeiro")}</span><span aria-hidden="true">·</span><time ${datetimeValue ? `datetime="${safe(datetimeValue)}"` : ""} title="${safe(dateTime(post.created_at))}">${safe(timeLabel)}</time></div>${mapsLink(post.location_latitude, post.location_longitude)}</div></header><p class="feed-copy">${safe(post.body)}</p>${image ? `<div class="feed-media"><img class="feed-image" src="${safe(image)}" alt="Trabalho publicado por ${safe(post.barber_name)}" loading="lazy"></div>` : ""}<div class="feed-actions"><button class="button feed-like ${post.has_liked ? "is-liked" : ""}" type="button" data-action="like" data-id="${safe(post.id)}">${post.has_liked ? "♥ Curtido" : "♡ Curtir"} · ${safe(post.likes_count)}</button><button class="button" type="button" data-action="comments" data-id="${safe(post.id)}">Comentários · ${safe(post.comments_count)}</button><button class="button button-primary feed-booking" type="button" data-action="book-barber" data-id="${safe(post.barber_id)}">Ver horários e agendar</button></div>${comments ? `<div class="comments">${comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span></div></div>`).join("") || '<p class="muted">Nenhum comentário ainda.</p>'}<form class="inline-form" data-form="comment" data-id="${safe(post.id)}"><input name="body" maxlength="1000" placeholder="Escreva um comentário..." aria-label="Escreva um comentário" required><button class="button" type="submit">Enviar</button></form></div>` : ""}</article>`;
     }).join("") : '<p class="empty-state">Os barbeiros ainda não publicaram novidades.</p>';
     main.innerHTML = `${pageHeading("COMUNIDADE", "Feed dos barbeiros", "Acompanhe as novidades, curta, comente e agende seu próximo atendimento.")}<section><div class="card-header"><div><span class="eyebrow">NOVIDADES</span><h2>Postagens</h2></div></div>${postCards}</section><section>${serviceCards}</section>`;
 }
@@ -606,7 +636,7 @@ function renderPosts() {
         const likes = likesByPost[post.id];
         const commentList = comments === undefined ? "" : `<div class="detalhes-interacao">${comments.length ? comments.map(comment => `<div class="comment-item"><span class="avatar avatar-comentario">${avatarContents(comment.author_avatar_path, comment.author_name)}</span><div><strong>${safe(comment.author_name)}</strong><span>${safe(comment.body)}</span><time>${dateTime(comment.created_at)}</time></div></div>`).join("") : '<p class="muted">Nenhum comentário nesta postagem.</p>'}</div>`;
         const likeList = likes === undefined ? "" : `<div class="lista-curtidas">${likes.length ? likes.map(like => `<div class="curtida-item"><span class="avatar avatar-comentario">${avatarContents(like.avatar_path, like.profile_name)}</span><strong>${safe(like.profile_name)}</strong><time>${dateTime(like.created_at)}</time></div>`).join("") : '<p class="muted">Esta postagem ainda não recebeu curtidas.</p>'}</div>`;
-        return `<article class="card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, profile.full_name)}</span><div><span class="eyebrow">${safe(post.shop_name || profile.shop_name)}</span><time class="muted">${dateTime(post.created_at)}</time></div></div><button class="button button-danger" type="button" data-action="delete-post" data-id="${safe(post.id)}">Excluir</button></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<img class="feed-image" src="${safe(image)}" alt="Imagem da postagem" loading="lazy">` : ""}<p class="muted">♥ ${safe(post.likes_count)} curtidas · ${safe(post.comments_count)} comentários</p><div class="feed-actions"><button class="button" type="button" data-action="post-likes" data-id="${safe(post.id)}">${likes === undefined ? "Ver curtidas" : "Ocultar curtidas"} (${safe(post.likes_count)})</button><button class="button" type="button" data-action="post-comments" data-id="${safe(post.id)}">${comments === undefined ? "Ver comentários" : "Ocultar comentários"} (${safe(post.comments_count)})</button></div>${likeList}${commentList}</article>`;
+        return `<article class="card feed-card"><div class="card-header"><div class="cabecalho-postagem"><span class="avatar avatar-postagem">${avatarContents(post.barber_avatar_path, profile.full_name)}</span><div><span class="eyebrow">${safe(post.shop_name || profile.shop_name)}</span><time class="muted">${dateTime(post.created_at)}</time></div></div><button class="button button-danger" type="button" data-action="delete-post" data-id="${safe(post.id)}">Excluir</button></div><p class="feed-copy">${safe(post.body)}</p>${image ? `<div class="feed-media"><img class="feed-image" src="${safe(image)}" alt="Imagem da postagem" loading="lazy"></div>` : ""}<p class="muted">♥ ${safe(post.likes_count)} curtidas · ${safe(post.comments_count)} comentários</p><div class="feed-actions"><button class="button" type="button" data-action="post-likes" data-id="${safe(post.id)}">${likes === undefined ? "Ver curtidas" : "Ocultar curtidas"} (${safe(post.likes_count)})</button><button class="button" type="button" data-action="post-comments" data-id="${safe(post.id)}">${comments === undefined ? "Ver comentários" : "Ocultar comentários"} (${safe(post.comments_count)})</button></div>${likeList}${commentList}</article>`;
     }).join("") : '<p class="empty-state">Compartilhe seu primeiro trabalho, novidade ou aviso com os clientes.</p>';
     main.innerHTML = `${pageHeading("CONTEÚDO", "Suas postagens", "Publique novidades e acompanhe curtidas e comentários dos clientes.", action)}${cards}`;
 }
@@ -693,6 +723,7 @@ document.addEventListener("click", async event => {
     if (showsBusy) setButtonBusy(actionButton, true);
     try {
         if (action === "close-dialog") dialog.close();
+        else if (action === "sign-out") await signOut();
         else if (action === "reload") {
             if (profile) await loadView(view);
             else await start();
@@ -1075,7 +1106,7 @@ async function start() {
         document.querySelector("#today-date").textContent = new Intl.DateTimeFormat("pt-BR", {
             weekday: "long", day: "2-digit", month: "long", year: "numeric"
         }).format(new Date()).toLocaleUpperCase("pt-BR");
-        document.querySelector("#role-label").textContent = isBarber() ? "PAINEL DO BARBEIRO" : "ÁREA DO CLIENTE";
+        document.querySelector("#role-label").textContent = isBarber() ? "BARBEIRO" : "CLIENTE";
         view = isBarber() ? "overview" : "feed";
         await loadView(view);
     } catch (error) {

@@ -40,10 +40,20 @@ h3 { margin-bottom: 5px; font-size: 17px; }
 .button[aria-busy="true"]::after { content: ""; width: 13px; height: 13px; flex: 0 0 13px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: corte-mais-spin 700ms linear infinite; }
 .card { margin: 0 0 16px; padding: 20px; border: 1px solid #e5e1d7; border-radius: 4px; background: #fffefa; box-shadow: 0 5px 18px #19191908; }
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 14px; }
-.feed-card { overflow: hidden; padding: 14px; }
-.feed-image { display: block; width: auto; max-width: 100%; max-height: min(65vh, 480px); height: auto; margin: 8px auto; border-radius: 3px; object-fit: contain; }
-.feed-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid #eeeae1; }
-.feed-copy { line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.feed-card { overflow: hidden; padding: 24px; }
+.feed-post-header { display: flex; align-items: center; gap: 12px; }
+.feed-post-identity { display: grid; min-width: 0; gap: 4px; }
+.feed-shop-link { width: fit-content; max-width: 100%; padding: 0; overflow: hidden; border: 0; color: #191919; background: transparent; font-size: 15px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.feed-shop-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.feed-post-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; color: #77736b; font-size: 12px; }
+.feed-copy { margin: 16px 0 0; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.feed-media { display: grid; width: min(100%, 600px, 72vh); aspect-ratio: 1; margin: 10px auto 0; overflow: hidden; place-items: center; border: 1px solid #eeeae1; border-radius: 3px; background: #f3f0e7; }
+.feed-image { display: block; width: 100%; height: 100%; object-fit: contain; }
+.feed-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #eeeae1; }
+.feed-actions .button { min-height: 44px; }
+.painel-aplicativo .feed-actions .feed-booking { border-color: #e4bb36; color: #191919; background: #f2c94c; }
+.painel-aplicativo .feed-actions .feed-booking:hover { border-color: #d3aa27; color: #191919; background: #e9bd3e; }
+.feed-like.is-liked { border-color: #e6c348; background: #fbf2d3; }
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .price { color: #8a632e; font-size: 18px; font-weight: 700; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -90,4 +100,6 @@ h3 { margin-bottom: 5px; font-size: 17px; }
     .form-grid { grid-template-columns: 1fr; gap: 0; }
     .field-full { grid-column: auto; }
     .card { padding: 16px; }
+    .feed-card { padding: 18px; }
+    .feed-actions .feed-booking { flex: 1 1 100%; }
 }

@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css">
-    <link rel="stylesheet" href="home.css?v=20261104-2">
+    <link rel="stylesheet" href="app.css?v=20261117-1">
+    <link rel="stylesheet" href="home.css?v=20261117-3">
 </head>
 
 <body class="painel-aplicativo">
@@ -28,7 +28,7 @@
                 </a>
                 <div class="seletor-negocio" aria-label="Conta atual">
                     <span class="avatar avatar-negocio" id="business-avatar">CM</span>
-                    <span class="dados-negocio"><small id="business-name">Minha barbearia</small><strong id="user-name">Carregando...</strong></span>
+                    <span class="dados-negocio"><small id="business-name">Minha barbearia</small><strong id="user-name">...</strong></span>
                 </div>
                 <nav class="navegacao-painel" id="app-nav" aria-label="Navegação do painel"></nav>
                 <button class="botao-sair" id="sign-out" type="button"><span aria-hidden="true">↪</span> Sair da conta</button>
@@ -45,13 +45,13 @@
                     </div>
                 </header>
                 <main class="conteudo-painel" id="app-main" tabindex="-1">
-                    <p class="loading-state">Carregando sua conta...</p>
+                    <p class="loading-state" role="status"><span class="loading-spinner" aria-hidden="true"></span>Carregando sua conta...</p>
                 </main>
         </div>
     </div>
     <dialog id="app-dialog" class="dialogo-cliente" aria-label="Formulário do painel"></dialog>
     <div id="app-notice" class="aviso-flutuante" role="status" aria-live="polite"></div>
-    <script type="module" src="home.js?v=20261117-1"></script>
+    <script type="module" src="home.js?v=20261117-3"></script>
 </body>
 
 </html>

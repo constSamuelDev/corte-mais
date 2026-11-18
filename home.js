@@ -8,6 +8,7 @@ let supabase;
 let user;
 let profile;
 let view = "";
+let viewLoadId = 0;
 let posts = [];
 let services = [];
 let bookings = [];
@@ -193,6 +194,12 @@ function showNotice(message, isError = false) {
     showNotice.timer = window.setTimeout(() => notice.classList.remove("visivel"), 3500);
 }
 
+function setButtonBusy(button, isBusy) {
+    button.disabled = isBusy;
+    if (isBusy) button.setAttribute("aria-busy", "true");
+    else button.removeAttribute("aria-busy");
+}
+
 function renderError(error) {
     console.error(error);
     main.innerHTML = `<div class="error-state"><strong>Não foi possível carregar esta página.</strong><p>${safe(error.message || "Verifique a conexão e a configuração do Supabase.")}</p><button class="button" data-action="reload" type="button">Tentar novamente</button></div>`;
@@ -229,17 +236,21 @@ function pageHeading(eyebrow, title, description, action = "") {
 function openDialog(title, eyebrow, fields, buttonText, onSubmit) {
     dialog.innerHTML = `<form class="dialog-content" id="dialog-form"><div class="dialog-heading"><div><span class="eyebrow">${safe(eyebrow)}</span><h2>${safe(title)}</h2></div><button class="dialog-close" type="button" data-action="close-dialog" aria-label="Fechar"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2.5"/></svg></button></div>${fields}<button class="button button-primary" type="submit">${safe(buttonText)}</button></form>`;
     dialog.showModal();
+    const fileInput = dialog.querySelector('input[type="file"]');
+    fileInput?.addEventListener("change", () => {
+        dialog.querySelector("[data-file-name]").textContent = fileInput.files[0]?.name || "Nenhuma foto selecionada";
+    });
     dialog.querySelector("#dialog-form").addEventListener("submit", async event => {
         event.preventDefault();
         const submit = event.submitter;
-        submit.disabled = true;
+        setButtonBusy(submit, true);
         try {
             await onSubmit(new FormData(event.currentTarget));
             dialog.close();
         } catch (error) {
             showNotice(error.message || "Não foi possível salvar. Tente novamente.", true);
         } finally {
-            submit.disabled = false;
+            setButtonBusy(submit, false);
         }
     });
 }
@@ -256,6 +267,9 @@ function field(name, label, type = "text", options = {}) {
     const accept = options.accept ? `accept="${safe(options.accept)}"` : "";
     if (type === "textarea") {
         return `<div class="field ${options.full ? "field-full" : ""}"><label for="${id}">${safe(label)}</label><textarea id="${id}" name="${safe(name)}" maxlength="${safe(options.maxLength || 2000)}" ${placeholder} ${required}>${safe(options.value || "")}</textarea></div>`;
+    }
+    if (type === "file") {
+        return `<div class="field field-upload ${options.full ? "field-full" : ""}"><span class="rotulo-campo">${safe(label)}</span><label class="seletor-foto" for="${id}"><span class="icone-galeria" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg></span><span class="seletor-foto-texto"><strong>Escolher uma foto</strong><small>JPG, PNG ou WebP · até 5 MB</small></span><span class="seletor-foto-nome" data-file-name>Nenhuma foto selecionada</span><input class="input-foto" id="${id}" name="${safe(name)}" type="file" aria-label="${safe(label)}" ${accept} ${required}></label></div>`;
     }
     if (type === "select") {
         const choices = (options.options || []).map(option => {
@@ -281,28 +295,41 @@ function render() {
 }
 
 async function loadView(nextView) {
-    view = nextView;
-    main.innerHTML = '<p class="loading-state">Carregando...</p>';
+    const requestId = ++viewLoadId;
+    const targetView = nextView;
+    view = targetView;
+    navigation();
+    main.setAttribute("aria-busy", "true");
+    const loadingTimer = window.setTimeout(() => {
+        if (requestId === viewLoadId) main.classList.add("carregando");
+    }, 180);
     try {
-        if (view === "overview") {
+        if (targetView === "overview") {
             await Promise.all([loadBookings(), loadServices(true), loadFinancialEntries(), loadInventoryItems()]);
         }
-        if (view === "feed") await loadFeed();
-        if (view === "posts") await loadPosts();
-        if (view === "services") await loadServices(true);
-        if (view === "bookings") {
+        if (targetView === "feed") await loadFeed();
+        if (targetView === "posts") await loadPosts();
+        if (targetView === "services") await loadServices(true);
+        if (targetView === "bookings") {
             await Promise.all([
                 loadBookings(),
                 ...(isBarber() ? [loadServices(true)] : [])
             ]);
         }
-        if (view === "clients") await loadBookings();
-        if (view === "finance") await loadFinancialEntries();
-        if (view === "inventory") await loadInventoryItems();
+        if (targetView === "clients") await loadBookings();
+        if (targetView === "finance") await loadFinancialEntries();
+        if (targetView === "inventory") await loadInventoryItems();
+        if (requestId !== viewLoadId) return;
         render();
         main.focus({ preventScroll: true });
     } catch (error) {
-        renderError(profileMigrationError(error));
+        if (requestId === viewLoadId) renderError(profileMigrationError(error));
+    } finally {
+        window.clearTimeout(loadingTimer);
+        if (requestId === viewLoadId) {
+            main.classList.remove("carregando");
+            main.removeAttribute("aria-busy");
+        }
     }
 }
 
@@ -577,6 +604,11 @@ document.addEventListener("click", async event => {
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) return;
     const { action, id } = actionButton.dataset;
+    const showsBusy = [
+        "reload", "delete-post", "toggle-service", "delete-service", "delete-inventory",
+        "like", "comments", "post-comments", "post-likes", "cancel-booking", "booking-status"
+    ].includes(action);
+    if (showsBusy) setButtonBusy(actionButton, true);
     try {
         if (action === "close-dialog") dialog.close();
         else if (action === "reload") {
@@ -805,6 +837,8 @@ document.addEventListener("click", async event => {
         }
     } catch (error) {
         showNotice(error.message || "Não foi possível concluir a ação.", true);
+    } finally {
+        if (showsBusy) setButtonBusy(actionButton, false);
     }
 });
 
@@ -815,6 +849,8 @@ document.addEventListener("submit", async event => {
         const postId = form.dataset.id;
         const body = String(new FormData(form).get("body") || "").trim();
         if (!body) return;
+        const submit = form.querySelector('button[type="submit"]');
+        setButtonBusy(submit, true);
         try {
             const { error } = await supabase.from("post_comments").insert({
                 post_id: postId, author_id: user.id, body
@@ -829,6 +865,8 @@ document.addEventListener("submit", async event => {
             renderFeed();
         } catch (error) {
             showNotice(error.message || "Não foi possível enviar o comentário.", true);
+        } finally {
+            setButtonBusy(submit, false);
         }
         return;
     }
@@ -861,7 +899,7 @@ document.addEventListener("submit", async event => {
                 updates.location_longitude = null;
             }
         }
-        submit.disabled = true;
+        setButtonBusy(submit, true);
         try {
             if (avatarFile.size > 5 * 1024 * 1024) {
                 throw new Error("A foto deve ter no máximo 5 MB.");
@@ -911,7 +949,7 @@ document.addEventListener("submit", async event => {
         } catch (error) {
             showNotice(error.message || "Não foi possível atualizar o perfil.", true);
         } finally {
-            submit.disabled = false;
+            setButtonBusy(submit, false);
         }
     }
 });

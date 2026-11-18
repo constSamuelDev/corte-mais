@@ -8,6 +8,7 @@ const shopInput = document.querySelector("#shop-name");
 const passwordInput = document.querySelector("#password");
 const submitButton = document.querySelector("#botao-acesso");
 const resendConfirmationButton = document.querySelector("#reenviar-confirmacao");
+const recoveryButton = document.querySelector("#recuperar-senha");
 let selectedRole = "barber";
 let mode = "login";
 let confirmationExpired = false;
@@ -20,6 +21,12 @@ function showStatus(message, isError = false) {
     status.textContent = message;
     status.hidden = false;
     status.classList.toggle("status-erro", isError);
+}
+
+function setButtonBusy(button, isBusy) {
+    button.disabled = isBusy;
+    if (isBusy) button.setAttribute("aria-busy", "true");
+    else button.removeAttribute("aria-busy");
 }
 
 function formatAuthError(error) {
@@ -106,7 +113,7 @@ document.querySelector("#modo-criar").addEventListener("click", () => setMode("s
 form.addEventListener("submit", async event => {
     event.preventDefault();
     status.hidden = true;
-    submitButton.disabled = true;
+    setButtonBusy(submitButton, true);
 
     try {
         const client = exigirSupabase();
@@ -148,7 +155,7 @@ form.addEventListener("submit", async event => {
     } catch (error) {
         showStatus(formatAuthError(error), true);
     } finally {
-        submitButton.disabled = false;
+        setButtonBusy(submitButton, false);
     }
 });
 
@@ -159,6 +166,7 @@ document.querySelector("#recuperar-senha").addEventListener("click", async () =>
         form.elements.email.focus();
         return;
     }
+    setButtonBusy(recoveryButton, true);
     try {
         const client = exigirSupabase();
         const { error } = await client.auth.resetPasswordForEmail(email, {
@@ -168,6 +176,8 @@ document.querySelector("#recuperar-senha").addEventListener("click", async () =>
         showStatus("Se houver uma conta com esse e-mail, enviaremos as instruções de recuperação.");
     } catch (error) {
         showStatus(formatAuthError(error) || "Não foi possível enviar o e-mail de recuperação.", true);
+    } finally {
+        setButtonBusy(recoveryButton, false);
     }
 });
 
@@ -178,7 +188,7 @@ resendConfirmationButton.addEventListener("click", async () => {
         form.elements.email.focus();
         return;
     }
-    resendConfirmationButton.disabled = true;
+    setButtonBusy(resendConfirmationButton, true);
     try {
         const client = exigirSupabase();
         const { error } = await client.auth.resend({
@@ -192,7 +202,7 @@ resendConfirmationButton.addEventListener("click", async () => {
     } catch (error) {
         showStatus(formatAuthError(error) || "Não foi possível reenviar a confirmação.", true);
     } finally {
-        resendConfirmationButton.disabled = false;
+        setButtonBusy(resendConfirmationButton, false);
     }
 });
 
